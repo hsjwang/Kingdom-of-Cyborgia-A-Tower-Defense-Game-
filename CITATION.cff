@@ -20,13 +20,13 @@ authors:
     given-names: Anne
   - family-names: Meaney
     given-names: Annie
-  - family-names: "[Supervising Author Family Name]"
-    given-names: "[Supervising Author Given Name]"
-    affiliation: "[Institution — camera-ready]"
+  - family-names: Wang
+    given-names: Hsiao An
+    affiliation: Northeastern University
 version: "1.0.0"
 date-released: "2026-06-24"
 license: MIT
-repository-code: "https://github.com/[YOUR-USERNAME]/kingdom-of-cyborgia"
+repository-code: "https://github.com/hsjwang/kingdom-of-cyborgia"
 keywords:
   - cybersecurity education
   - MITRE ATT&CK
@@ -48,8 +48,8 @@ references:
         given-names: Anne
       - family-names: Meaney
         given-names: Annie
-      - family-names: "[Supervising Author Family Name]"
-        given-names: "[Supervising Author Given Name]"
+      - family-names: Wang
+        given-names: Hsiao An
     collection-title: "Proceedings of the 58th ACM Technical Symposium on Computer Science Education (SIGCSE TS 2027)"
     publisher: "ACM"
     year: 2027
