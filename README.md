@@ -142,7 +142,7 @@ If you are interested in:
 - Co-designing an evaluation instrument
 - Co-authoring a follow-on empirical paper
 
-Please [open an issue](../../issues) or contact the team at **[YOUR CONTACT EMAIL]**.
+Please [open an issue](../../issues) or contact the team at hs.wang@northeastern.edu.
 
 We are also proposing *Kingdom of Cyborgia* as a **SIGCSE Nifty Assignment** candidate and as a **SIGCSE TS 2027 workshop activity**.
 
@@ -154,7 +154,7 @@ The game is designed for easy extension. All ATT&CK techniques and D3FEND mitiga
 
 **Planned extensions:**
 - Randomized attack mode (no Intel Report hint) for advanced play
-- Constrained procurement mode (randomized available defenses each level)
+- Constrained procurement mode (randomized available defenses at each level)
 - Expanded ATT&CK/D3FEND coverage across a broader subset of the framework
 - Web-based deployment for Chromebook and mobile environments
 
@@ -175,7 +175,7 @@ The game is designed for easy extension. All ATT&CK techniques and D3FEND mitiga
 - Sophia Campione
 - Anne Drago
 - Annie Meaney
-- [Supervising faculty — camera-ready]
+- Hsiao An Wang
 
 ---
 
