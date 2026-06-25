@@ -1,0 +1,5 @@
+# Kingdom of Cyborgia — Python dependencies
+# Python 3.11+ required
+# Install with: pip install -r requirements.txt
+
+pygame>=2.5.0

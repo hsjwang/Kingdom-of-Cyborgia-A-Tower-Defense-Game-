@@ -1,0 +1,56 @@
+cff-version: 1.2.0
+message: "If you use this game in research or teaching, please cite it as below."
+type: software
+title: "Kingdom of Cyborgia: A Tower-Defense Game for Teaching MITRE ATT&CK and D3FEND Concepts to High School Students"
+abstract: >
+  Kingdom of Cyborgia is an open-source educational tower-defense game
+  that embeds five MITRE ATT&CK techniques and eleven D3FEND mitigations
+  into strategic, consequence-driven gameplay for high school students.
+  Players allocate a limited budget to deploy defensive countermeasures
+  against escalating attack scenarios, learning through a three-phase
+  build–attack–debrief cycle that models real security practice including
+  risk tolerance thresholds, post-incident analysis, and defense-in-depth
+  strategy. The game is packaged as a standalone executable for macOS and
+  Windows and requires no installation, internet connection, or prior
+  technical knowledge to run.
+authors:
+  - family-names: Campione
+    given-names: Sophia
+  - family-names: Drago
+    given-names: Anne
+  - family-names: Meaney
+    given-names: Annie
+  - family-names: "[Supervising Author Family Name]"
+    given-names: "[Supervising Author Given Name]"
+    affiliation: "[Institution — camera-ready]"
+version: "1.0.0"
+date-released: "2026-06-24"
+license: MIT
+repository-code: "https://github.com/[YOUR-USERNAME]/kingdom-of-cyborgia"
+keywords:
+  - cybersecurity education
+  - MITRE ATT&CK
+  - MITRE D3FEND
+  - game-based learning
+  - high school
+  - K-12 education
+  - tower defense
+  - serious games
+  - Python
+  - pygame
+references:
+  - type: article
+    title: "Kingdom of Cyborgia: A Tower-Defense Game for Teaching MITRE ATT&CK and D3FEND Concepts to High School Students"
+    authors:
+      - family-names: Campione
+        given-names: Sophia
+      - family-names: Drago
+        given-names: Anne
+      - family-names: Meaney
+        given-names: Annie
+      - family-names: "[Supervising Author Family Name]"
+        given-names: "[Supervising Author Given Name]"
+    collection-title: "Proceedings of the 58th ACM Technical Symposium on Computer Science Education (SIGCSE TS 2027)"
+    publisher: "ACM"
+    year: 2027
+    notes: "To appear — update with DOI upon publication"
