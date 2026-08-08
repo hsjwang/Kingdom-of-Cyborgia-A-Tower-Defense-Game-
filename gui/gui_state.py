@@ -4,10 +4,15 @@ Handles the state of the game (variables and reset functionality)
 import pygame 
 from gui.button import createDefenseButtons
 import gui.design_specs as gs
+from engine.schema import attacks_dict, defenses_dict
+
 
 class UIState:
     def __init__(self):
         self.game_state = "Title Screen"
+
+        self.game_modes = ["BEGINNER", "CUSTOM", "RANDOM"]
+        self.selected_mode_index = 0
         
         # Animations & Timers
         self.sim_timer = 0
@@ -38,6 +43,15 @@ class UIState:
         self.showing_feedback = False
         self.feedback_scroll_y = 0
         self.max_feedback_scroll = 10000
+
+        self.selected_attacks = {atk: False for atk in attacks_dict}
+        self.selected_defenses = {dfn: False for dfn in defenses_dict}
+        self.custom_scroll_y = 0
+
+        self.alert_title = ""
+        self.alert_message = ""
+        self.show_alert = False
+        self.show_custom_modal = False
 
     ### Reset Functions ### 
     def reset_dragon_simulation(self, fire_list):
@@ -83,6 +97,10 @@ class UIState:
         
         self.reset_dragon_simulation(fire_list)
         self.reset_win_animation(particles)
+
+        self.custom_scroll_y = 0 
+        self.selected_attacks = {atk: False for atk in attacks_dict}
+        self.selected_defenses = {dfn: False for dfn in defenses_dict}
         
         print("[SYSTEM] Game Reset Successful.")
         return defense_buttons, info_buttons

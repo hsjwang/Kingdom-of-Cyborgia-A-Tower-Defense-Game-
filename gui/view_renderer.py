@@ -6,36 +6,62 @@ import math
 import random
 from gui.design_specs import COLORS, FONTS
 import gui.design_specs as gs
-from engine.schema import attacks_dict
+from engine.schema import attacks_dict, HOW_TO_PLAY_DATA, defenses_dict
 from gui.fire_particle import FireParticle
 
 ### Drawing Functions ###
-def draw_wrapped_text(surface, text, color, rect, font, line_spacing=0):
-    words = text.split(' ')
-    lines = []
-    current_line = ""
+def draw_wrapped_text(screen, text, color, rect, font, items=None, line_spacing=4, align="left", item_indent=20):
+    """
+    Renders wrapped text onto screen within a target pygame.Rect.
+    Supports centering ('align="center"'), '\\n' breaks, and bullet item lists.
+    """
+    rect = pygame.Rect(rect)
+    font_height = font.get_height()
+    y_offset = rect.top
 
-    for word in words:
-        test_line = current_line + word + " "
-        if font.size(test_line)[0] <= rect.width:
-            current_line = test_line
-        else:
-            lines.append(current_line)
-            current_line = word + " "
-    lines.append(current_line)
+    def render_wrapped_lines(text_str, max_w, x_pos):
+        nonlocal y_offset
+        paragraphs = str(text_str).split('\n')
+        
+        for paragraph in paragraphs:
+            if not paragraph.strip():
+                y_offset += font_height // 2 + line_spacing
+                continue
+                
+            words = paragraph.split(' ')
+            current_line = ""
+            
+            for word in words:
+                test_line = f"{current_line} {word}".strip()
+                if font.size(test_line)[0] <= max_w:
+                    current_line = test_line
+                else:
+                    if current_line:
+                        if y_offset + font_height > rect.bottom: return
+                        surf = font.render(current_line, True, color)
+                        line_x = rect.centerx - (surf.get_width() // 2) if align == "center" else x_pos
+                        screen.blit(surf, (line_x, y_offset))
+                        y_offset += font_height + line_spacing
+                    current_line = word
+                    
+            if current_line:
+                if y_offset + font_height > rect.bottom: return
+                surf = font.render(current_line, True, color)
+                line_x = rect.centerx - (surf.get_width() // 2) if align == "center" else x_pos
+                screen.blit(surf, (line_x, y_offset))
+                y_offset += font_height + line_spacing
 
-    # Calculate total height
-    total_height = len(lines) * (font.get_height() + line_spacing)
+    # 1. Main Text
+    if text:
+        render_wrapped_lines(text, rect.width, rect.left)
 
-    # Start Y so text is vertically centered
-    y = rect.y + (rect.height - total_height) // 2
+    # 2. List Items
+    if items and isinstance(items, list):
+        y_offset += line_spacing
+        item_max_width = rect.width - item_indent
 
-    for line in lines:
-        line_surface = font.render(line.strip(), True, color)
-        line_rect = line_surface.get_rect(center=(rect.centerx, y + line_surface.get_height() // 2))
-        surface.blit(line_surface, line_rect)
-
-        y += font.get_height() + line_spacing
+        for item in items:
+            render_wrapped_lines(item, item_max_width, rect.left + item_indent)
 
 def draw_guidebook(screen, ui_state, loader):
 
@@ -99,8 +125,9 @@ def draw_guidebook(screen, ui_state, loader):
             screen,
             "Select a section to learn the rules of the game or browse the kingdom's defenses.",
             (45, 25, 10),
-            info_rect,
+            info_rect,  
             body_font,
+            align="center",
             line_spacing=6
         )
 
@@ -111,7 +138,7 @@ def draw_guidebook(screen, ui_state, loader):
 
     # Pick which page list to use
     if ui_state.guidebook_section == "how_to_play":
-        current_pages = gs.HOW_TO_PLAY_DATA
+        current_pages = HOW_TO_PLAY_DATA
     else:
         current_pages = gs.DEFENSE_GUI_PAGES
 
@@ -184,8 +211,8 @@ def draw_guidebook(screen, ui_state, loader):
         )
 
         desc_rect = pygame.Rect(
-            gs.GUIDEBOOK_RECT.left + 90,
-            gs.GUIDEBOOK_RECT.top + 325,
+            gs.GUIDEBOOK_RECT.left + 85,
+            gs.GUIDEBOOK_RECT.top + 340,
             gs.GUIDEBOOK_RECT.width - 180,
             155
         )
@@ -200,9 +227,9 @@ def draw_guidebook(screen, ui_state, loader):
         )
 
         desc_rect = pygame.Rect(
-            gs.GUIDEBOOK_RECT.left + 79,
+            gs.GUIDEBOOK_RECT.left + 85,
             gs.GUIDEBOOK_RECT.top + 230,
-            gs.GUIDEBOOK_RECT.width - 157,
+            gs.GUIDEBOOK_RECT.width - 180,
             220
         )
 
@@ -212,7 +239,8 @@ def draw_guidebook(screen, ui_state, loader):
       (45, 25, 10),
       title_rect,
       page_title_font,
-      line_spacing=2
+      line_spacing=2,
+      align="center"
     )
 
     draw_wrapped_text(
@@ -221,7 +249,10 @@ def draw_guidebook(screen, ui_state, loader):
         (35, 20, 10),
         desc_rect,
         FONTS["guide_text"],
-        line_spacing=6
+        items=current_page.get("items"),  # Passes items if they exist, or None if they don't
+        line_spacing=6,
+        align="center",
+        item_indent=20  # Indents list items 20px from the left margin
     )
 
     section_name = "How to Play" if ui_state.guidebook_section == "how_to_play" else "Defenses"
@@ -662,69 +693,54 @@ def draw_win_scene(surface, game_state, loader, particles):
     rect = current_shield.get_rect(center=(center_x, center_y))
     surface.blit(current_shield, rect)
 
-def draw_title_screen(screen, player_health, ui_state, loader, play_button, title_guide_button):
+def draw_title_screen(screen, player_health, ui_state, loader, buttons):
     # 1. Draw the Background (The Castle Image)
-        current_bg = loader.get_current_bg(player_health)
-        screen.blit(current_bg, (0, 0))
+    current_bg = loader.get_current_bg(player_health)
+    screen.blit(current_bg, (0, 0))
 
-        # 2. Add a semi-transparent "dimmer" so the text is easy to read
-        dimmer = pygame.Surface((1280, 720))
-        dimmer.set_alpha(100)
-        dimmer.fill((0, 0, 0))
-        screen.blit(dimmer, (0, 0))
+    # 2. Add a semi-transparent dimmer so the text is easy to read
+    dimmer = pygame.Surface((1280, 720))
+    dimmer.set_alpha(100)
+    dimmer.fill((0, 0, 0))
+    screen.blit(dimmer, (0, 0))
 
-        # 3. Draw the Title
-        title_label = "MITRE ATT&CK SIMULATION"
-        title_surface = FONTS["home_title"].render(title_label, True, (180, 80, 255))
-        title_rect = title_surface.get_rect(center=(screen.get_width() // 2, 250))
+    # 3. Draw the Title
+    title_label = "MITRE ATT&CK SIMULATION"
+    title_surface = FONTS["home_title"].render(title_label, True, COLORS["neon_purple"])
+    title_rect = title_surface.get_rect(center=(screen.get_width() // 2, 250))
+    title_shadow = FONTS["home_title"].render(title_label, True, (60, 20, 80))
+    screen.blit(title_shadow, title_rect.move(2, 2))
+    screen.blit(title_surface, title_rect)
 
-        title_shadow = FONTS["home_title"].render(title_label, True, (60, 20, 80))
-        title_shadow_rect = title_rect.move(2, 2)
+    mouse = pygame.mouse.get_pos()
 
-        screen.blit(title_shadow, title_shadow_rect)
-        screen.blit(title_surface, title_rect)
+    def draw_title_button(button, font=None):
+        hover = button.rect.collidepoint(mouse)
+        fill = (30, 30, 35) if hover else (20, 20, 20)
+        pygame.draw.rect(screen, fill, button.rect, border_radius=10)
+        pygame.draw.rect(screen, COLORS["neon_purple"], button.rect, width=2, border_radius=10)
 
-        # Draw buttons
-        mouse = pygame.mouse.get_pos()
+        use_font = font or button.textfont
+        text = use_font.render(button.text, True, COLORS["neon_purple"])
+        text_rect = text.get_rect(center=button.rect.center)
 
-        # ---------- PLAY BUTTON ----------
-        play_hover = play_button.rect.collidepoint(mouse)
-        play_color = (30, 30, 35) if play_hover else (20, 20, 20)
+        if button.text in ["<", ">"]:
+            text_rect.y -= 4
+        if button.text == "<":            
+            text_rect.x -= 2
+        shadow = use_font.render(button.text, True, (100, 40, 150))
+        screen.blit(shadow, text_rect.move(2, 2))
+        screen.blit(text, text_rect)
 
-        pygame.draw.rect(screen, play_color, play_button.rect, border_radius=10)
-        pygame.draw.rect(screen, COLORS["neon_purple"], play_button.rect, width=2, border_radius=10)
-
-        play_font = play_button.textfont
-        play_text = play_font.render(play_button.text, True, COLORS["neon_purple"])
-        play_text_rect = play_text.get_rect(center=play_button.rect.center)
-
-        play_shadow = play_font.render(play_button.text, True, (100, 40, 150))
-        play_shadow_rect = play_text_rect.move(2, 2)
-
-        screen.blit(play_shadow, play_shadow_rect)
-        screen.blit(play_text, play_text_rect)
+    draw_title_button(buttons["play"])
+    draw_title_button(buttons["mode_left"])
+    draw_title_button(buttons["mode"])
+    draw_title_button(buttons["mode_right"])
+    draw_title_button(buttons["title_guide"])
 
 
-
-        # ---------- GUIDE BUTTON ----------
-        guide_hover = title_guide_button.rect.collidepoint(mouse)
-        guide_color = (30, 30, 35) if guide_hover else (20, 20, 20)
-
-        pygame.draw.rect(screen, guide_color, title_guide_button.rect, border_radius=10)
-        pygame.draw.rect(screen, COLORS["neon_purple"], title_guide_button.rect, width=2, border_radius=10)
-
-        guide_font = title_guide_button.textfont
-        guide_text = guide_font.render(title_guide_button.text, True, COLORS["neon_purple"])
-        guide_text_rect = guide_text.get_rect(center=title_guide_button.rect.center)
-
-        guide_shadow = guide_font.render(title_guide_button.text, True, (100, 40, 150))
-        guide_shadow_rect = guide_text_rect.move(2, 2)
-
-        screen.blit(guide_shadow, guide_shadow_rect)
-        screen.blit(guide_text, guide_text_rect)
-
-        if ui_state.show_guidebook:
-            draw_guidebook(screen, ui_state, loader)
+    if ui_state.show_guidebook:
+        draw_guidebook(screen, ui_state, loader)
 
 def draw_win_animation(screen, gui_state, loader, particles):
     # 1. Entrance Animation
@@ -1173,8 +1189,6 @@ def draw_lock_button(buttons, state, screen):
     screen.blit(shadow, shadow_rect)
     screen.blit(text, text_rect)
 
-import pygame
-
 def draw_trash_can(screen, loader, rect, is_hovered=False):
     # --- PHASE 1: Recalculate Proportional Drawing ---
     img_rect = loader.trash_can_img.get_rect()
@@ -1217,3 +1231,253 @@ def draw_trash_can(screen, loader, rect, is_hovered=False):
     pos_y = rect.centery - (final_h // 2)
 
     screen.blit(final_img, (pos_x, pos_y))
+
+def draw_checkbox_section(screen, header_title, items_dict, master_dict, start_x, start_y, max_width=380):
+    # Header
+    header = FONTS["header"].render(header_title, True, (220, 220, 100))
+    screen.blit(header, (start_x, start_y))
+
+    y_offset = start_y + 35
+    box_size = 20
+    font = FONTS["dfont"]
+
+    for item_name, is_selected in items_dict.items():
+        box_rect = pygame.Rect(start_x, y_offset, box_size, box_size)
+
+        # Draw Checkbox
+        if is_selected:
+            # Filled Emerald Green Background
+            pygame.draw.rect(screen, (46, 139, 87), box_rect, border_radius=4)
+            
+            # White Checkmark ("✓")
+            p1 = (box_rect.left + 4, box_rect.top + 10)
+            p2 = (box_rect.left + 8, box_rect.top + 14)
+            p3 = (box_rect.left + 15, box_rect.top + 5)
+            pygame.draw.lines(screen, (255, 255, 255), False, [p1, p2, p3], 2)
+        else:
+            # Unchecked Outer Box
+            pygame.draw.rect(screen, (120, 120, 120), box_rect, width=2, border_radius=4)
+
+        # Build full item label text safely
+        item_obj = master_dict.get(item_name)
+        display_name = item_obj.name if item_obj and hasattr(item_obj, 'name') else item_name
+        full_text = f"{item_name}: {display_name}"
+        color = (255, 255, 255) if is_selected else (170, 170, 170)
+
+        # Single-Line Truncation
+        if font.size(full_text)[0] > max_width:
+            while font.size(full_text + "...")[0] > max_width and len(full_text) > 0:
+                full_text = full_text[:-1]
+            full_text += "..."
+
+        # Render Label Text
+        label = font.render(full_text, True, color)
+        label_y = box_rect.centery - (label.get_height() // 2)
+        screen.blit(label, (start_x + 30, label_y))
+
+        y_offset += 35
+
+    return y_offset  # <-- Return the final Y position
+
+def draw_custom_screen(screen, selected_attacks, selected_defenses, start_button, close_button, scroll_y=0):
+    screen_w, screen_h = screen.get_size()
+    
+    # 1. Darkened Backdrop (Alpha Overlay)
+    overlay = pygame.Surface((screen_w, screen_h), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 200))
+    screen.blit(overlay, (0, 0))
+
+    # 2. Center Popup Panel Setup
+    popup_w, popup_h = 850, 550
+    popup = pygame.Rect(0, 0, popup_w, popup_h)
+    popup.center = (screen_w // 2, screen_h // 2)
+
+    # Panel Drop Shadow
+    shadow_rect = popup.move(0, 5)
+    shadow_surface = pygame.Surface((popup_w, popup_h), pygame.SRCALPHA)
+    pygame.draw.rect(shadow_surface, (0, 0, 0, 90), (0, 0, popup_w, popup_h), border_radius=12)
+    screen.blit(shadow_surface, shadow_rect.topleft)
+
+    # Panel Body & Border
+    pygame.draw.rect(screen, (34, 38, 46), popup, border_radius=12)
+    pygame.draw.rect(screen, (68, 76, 92), popup, width=2, border_radius=12)
+
+    # 3. Header Title
+    title = FONTS["custom_start"].render("Select Custom Attacks & Defenses", True, (255, 255, 255))
+    title_rect = title.get_rect(center=(popup.centerx, popup.top + 30))
+    screen.blit(title, title_rect)
+
+    # Sub-header Accent Line
+    pygame.draw.line(screen, (55, 62, 75), (popup.left + 25, popup.top + 52), (popup.right - 25, popup.top + 52), 1)
+
+    # 4. Viewport Area (List Box)
+    scrollbar_width = 10
+    viewport_rect = pygame.Rect(popup.left + 20, popup.top + 64, popup_w - 55, popup_h - 135)
+
+    # 5. Start Button Positioning & Draw
+    start_button.rect.centerx = popup.centerx
+    start_button.rect.bottom = popup.bottom - 18
+    start_button.draw_button(screen)
+    
+    # 6. Close Button Positioning & Draw
+    close_button.rect.center = (popup.right - 25, popup.top + 25)
+    close_button.draw_button(screen)
+    
+    # Viewport Inset Background
+    pygame.draw.rect(screen, (24, 27, 34), viewport_rect, border_radius=6)
+
+    # Calculate exact maximum content height directly from list lengths
+    item_count = max(len(selected_attacks), len(selected_defenses))
+    # 35px section header + (item_count * 35px) + 60px bottom padding buffer
+    total_content_h = 35 + (item_count * 35) + 60
+    max_scroll = max(0, total_content_h - viewport_rect.height)
+    
+    # Clamp incoming scroll_y within valid range [0, max_scroll]
+    clamped_scroll_y = max(0, min(scroll_y, max_scroll))
+
+    # Render view with clip
+    old_clip = screen.get_clip()
+    screen.set_clip(viewport_rect)
+
+    content_y = viewport_rect.top + 10 - clamped_scroll_y
+    end_atk_y = draw_checkbox_section(screen, "Attacks", selected_attacks, attacks_dict, popup.left + 40, content_y)
+    end_def_y = draw_checkbox_section(screen, "Defenses", selected_defenses, defenses_dict, popup.left + 400, content_y)
+
+    screen.set_clip(old_clip)
+
+    # Viewport Border
+    pygame.draw.rect(screen, (58, 65, 78), viewport_rect, width=1, border_radius=6)
+
+    # ---------------- SCROLL BAR & THUMB ----------------
+    track_rect = pygame.Rect(
+        viewport_rect.right + 8,
+        viewport_rect.top,
+        scrollbar_width,
+        viewport_rect.height
+    )
+    
+    # Scrollbar Track Background
+    pygame.draw.rect(screen, (20, 22, 28), track_rect, border_radius=5)
+
+    if max_scroll > 0:
+        thumb_height = max(32, int(viewport_rect.height * (viewport_rect.height / total_content_h)))
+        travel_distance = track_rect.height - thumb_height
+        scroll_ratio = clamped_scroll_y / max_scroll
+        
+        thumb_y = track_rect.top + (scroll_ratio * travel_distance)
+        thumb_rect = pygame.Rect(track_rect.left, thumb_y, scrollbar_width, thumb_height)
+        
+        # Render Thumb
+        pygame.draw.rect(screen, (90, 102, 125), thumb_rect, border_radius=5)
+        pygame.draw.rect(screen, (140, 155, 180), thumb_rect, width=1, border_radius=5)
+
+    # 5. Start Button Positioning & Draw
+    start_button.rect.centerx = popup.centerx
+    start_button.rect.bottom = popup.bottom - 18
+    start_button.draw_button(screen)
+
+def draw_alert_popup(screen, message_text, ok_button):
+    """
+    Draws a modern modal alert popup. Automatically parses error header,
+    body text, and unmitigated attack lists seamlessly.
+    """
+    screen_w, screen_h = screen.get_size()
+
+    # 1. Parse Title vs Body Text
+    full_str = str(message_text).strip()
+    
+    if "ERROR: Cannot start game." in full_str:
+        title_text = "ERROR: Cannot Start Game"
+        # Extract everything after "ERROR: Cannot start game. "
+        body_text = full_str.replace("ERROR: Cannot start game.", "").strip()
+    elif "\n" in full_str:
+        title_text, body_text = full_str.split("\n", 1)
+    else:
+        title_text = "ERROR"
+        body_text = full_str
+
+    
+    # 2. Dark Backdrop Overlay
+    overlay = pygame.Surface((screen_w, screen_h), pygame.SRCALPHA)
+    overlay.fill((10, 12, 16, 210))
+    screen.blit(overlay, (0, 0))
+
+    # 3. Fonts & Dimensions
+    font_title = FONTS.get("custom_start", pygame.font.SysFont("Segoe UI, Arial", 18, bold=True))
+    font_msg = FONTS.get("small", pygame.font.SysFont("Segoe UI, Arial", 14))
+
+    popup_w = 500
+    max_text_w = popup_w - 20
+
+    # 4. Word-wrapping & Newline processing
+    raw_paragraphs = body_text.split("\n")
+    lines = []  # List of (text_string, is_bullet)
+
+    for paragraph in raw_paragraphs:
+        p_strip = paragraph.strip()
+        if not p_strip:
+            continue
+
+        is_bullet = p_strip.startswith("•") or p_strip.startswith("-")
+        words = paragraph.split(" ")
+        curr_line = ""
+
+        for word in words:
+            test_line = f"{curr_line} {word}".strip()
+            if font_msg.size(test_line)[0] <= max_text_w:
+                curr_line = test_line
+            else:
+                lines.append((curr_line, is_bullet))
+                curr_line = f"   {word}" if is_bullet else word  # Indent wrapped bullet lines
+
+        if curr_line:
+            lines.append((curr_line, is_bullet))
+    # Dynamic Height Calculation based on line count
+    line_height = 22
+    text_section_h = max(40, len(lines) * line_height)
+    popup_h = min(screen_h - 40, max(210, 50 + text_section_h + 65))
+
+    # Popup Positioning
+    popup = pygame.Rect(0, 0, popup_w, popup_h)
+    popup.center = (screen_w // 2, screen_h // 2)
+
+    # 5. Soft Drop Shadow
+    shadow_surface = pygame.Surface((popup_w + 16, popup_h + 16), pygame.SRCALPHA)
+    pygame.draw.rect(shadow_surface, (0, 0, 0, 90), (8, 8, popup_w, popup_h), border_radius=12)
+    shadow_surface = pygame.transform.smoothscale(shadow_surface, (popup_w + 16, popup_h + 16))
+    screen.blit(shadow_surface, (popup.left - 8, popup.top - 4))
+
+    # 6. Main Background & Header Bar
+    pygame.draw.rect(screen, (28, 32, 40), popup, border_radius=12)
+
+    accent_color = (235, 75, 75)  # Red for errors
+    header_bg = (50, 24, 28)
+
+    header_rect = pygame.Rect(popup.left, popup.top, popup_w, 48)
+    pygame.draw.rect(screen, header_bg, header_rect, border_top_left_radius=12, border_top_right_radius=12)
+    pygame.draw.line(screen, accent_color, (popup.left + 15, popup.top + 47), (popup.right - 15, popup.top + 47), 2)
+
+    # 7. Render Title Text
+    title_surf = font_title.render(title_text, True, (255, 255, 255))
+    screen.blit(title_surf, title_surf.get_rect(centerx=popup.centerx, centery=popup.top + 24))
+
+    # 8. Render Message Lines
+    start_y = popup.top + 64
+    for i, (line_text, is_bullet) in enumerate(lines):
+        line_surf = font_msg.render(line_text, True, (215, 222, 232))
+        
+        # Left-align bullet points; center general header text
+        if is_bullet or line_text.strip().startswith("•"):
+            line_rect = line_surf.get_rect(left=popup.left + 30, top=start_y + (i * line_height))
+        else:
+            line_rect = line_surf.get_rect(centerx=popup.centerx, top=start_y + (i * line_height))
+            
+        screen.blit(line_surf, line_rect)
+
+    # 9. Outer Border Frame
+    pygame.draw.rect(screen, (60, 68, 82), popup, width=1, border_radius=12)
+
+    # 10. OK Button Alignment & Drawing
+    ok_button.rect.centerx = popup.centerx
+    ok_button.rect.bottom = popup.bottom - 10
+    ok_button.draw_button(screen)

@@ -1,6 +1,6 @@
 import pygame 
-from gui.design_specs import FONTS, CASTLE_SOCKETS, NARRATIVE_NAMES, VISIBLE_DEFENSES, COLORS, TRASH_CAN_RECT
-from engine.schema import defenses_dict
+from gui.design_specs import FONTS, CASTLE_SOCKETS, COLORS, TRASH_CAN_RECT
+from engine.schema import defenses_dict, attacks_dict
 
 class Button:
     def __init__(self, xpos, ypos, width, height, text,
@@ -69,7 +69,7 @@ class Button:
 
             if self.defense_key is not None and not self.was_placed:
                 # Pull from NARRATIVE_NAMES in gui_schema
-                display_name = NARRATIVE_NAMES.get(self.defense_key, self.defense_key) #
+                display_name = defenses_dict.get(self.defense_key).story_name
                 
                 name_surface = FONTS["dfont"].render(display_name, True, text_white) #
                 cost_surface = FONTS["dfont"].render(f"${defenses_dict[self.defense_key].cost}", True, (180, 80, 255))
@@ -226,8 +226,10 @@ def createDefenseButtons(defense_buttons, server, castle_spacing, info_buttons, 
     if defense_buttons: 
         defense_buttons.clear()
         info_buttons.clear()
-        
-    for i, defense_key in enumerate(VISIBLE_DEFENSES):
+    
+    visible_defenses = list(server.available_defenses.keys())
+    for i, defense_key in enumerate(visible_defenses):
+
         y = 140 + i * (150 + castle_spacing)
         
         # Main Defense Button
@@ -254,23 +256,83 @@ def createDefenseButtons(defense_buttons, server, castle_spacing, info_buttons, 
         
         # New (+) Info Button
         # Index 'i' matches the index in DEFENSE_GUI_PAGES
+        guide_page_index = list(defenses_dict.keys()).index(defense_key)
         info_buttons.append(
             Button(
                 143, y, 30, 30, "?",
                 (255, 255, 255), FONTS["guide_text"],
                 (60, 20, 80), (100, 40, 150), 
                 (180, 80, 255), 5,
-                command=f"INFO_{i}",
+                command=f"INFO_{guide_page_index}",
                 draggable=True, 
                 server=server
             )
         )
 
+def custom_screen_max_scroll(screen_size, scroll_y=0):
+    screen_w, screen_h = screen_size
+    popup_w, popup_h = 850, 550
+    
+    popup_left = (screen_w - popup_w) // 2
+    popup_top = (screen_h - popup_h) // 2
+    
+    # Matching viewport height (550 - 135 = 415px)
+    viewport_rect = pygame.Rect(popup_left + 20, popup_top + 64, popup_w - 55, popup_h - 135)
+    
+    # Maximum items in either column
+    max_items = max(len(attacks_dict), len(defenses_dict))
+    
+    # 10px top margin + 35px header + (items * 35px) + 80px bottom buffer clearance
+    total_content_h = 10 + 35 + (max_items * 35) + 10
+    
+    max_scroll = max(0, total_content_h - viewport_rect.height)
+    
+    # Clamp scroll_y between 0 and max_scroll
+    return max(0, min(scroll_y, max_scroll))
+
+def handle_custom_screen_click(mouse_pos, selected_attacks, selected_defenses, screen_size, scroll_y=0):
+    screen_w, screen_h = screen_size
+    popup_w, popup_h = 850, 550
+    popup_left = (screen_w - popup_w) // 2
+    popup_top = (screen_h - popup_h) // 2
+    
+    viewport_rect = pygame.Rect(popup_left + 20, popup_top + 64, popup_w - 55, popup_h - 135)
+
+    if not viewport_rect.collidepoint(mouse_pos):
+        return
+
+    # Match the exact total_content_h from draw_custom_screen
+    item_count = max(len(selected_attacks), len(selected_defenses))
+    total_content_h = 35 + (item_count * 45) + 60
+    max_scroll = max(0, total_content_h - viewport_rect.height)
+    clamped_scroll_y = max(0, min(scroll_y, max_scroll))
+
+    relative_y = (mouse_pos[1] - viewport_rect.top) + clamped_scroll_y - 45
+
+    if relative_y >= 0:
+        item_index = int(relative_y // 35)
+
+        # Attacks Column
+        if popup_left + 40 <= mouse_pos[0] <= popup_left + 380:
+            attack_keys = list(selected_attacks.keys())
+            if 0 <= item_index < len(attack_keys):
+                key = attack_keys[item_index]
+                selected_attacks[key] = not selected_attacks[key]
+
+        # Defenses Column
+        elif popup_left + 400 <= mouse_pos[0] <= popup_left + 780:
+            defense_keys = list(selected_defenses.keys())
+            if 0 <= item_index < len(defense_keys):
+                key = defense_keys[item_index]
+                selected_defenses[key] = not selected_defenses[key]
+
+GAME_MODES = ("BEGINNER", "CUSTOM", "RANDOM")
+
 ### Init Game Buttons Function ###
 def init_game_buttons(server):
     return {
         "play": Button(
-                    490, 400, 300, 100,
+                    485, 350, 300, 85,
                     text="PLAY",
                     textcolor=COLORS["black"],
                     textfont=FONTS["playbutton"],
@@ -279,6 +341,42 @@ def init_game_buttons(server):
                     bordercolor=COLORS["black"],
                     borderpt=15,
                     command="START_GAME",
+                    server=server
+                ),
+        "mode_left": Button(
+                    427, 462, 50, 50,
+                    text="<",
+                    textcolor=COLORS["black"],
+                    textfont=FONTS["playbutton"],
+                    buttoncolor=COLORS["yellow_startbutton"],
+                    hovercolor=(199, 198, 197),
+                    bordercolor=COLORS["black"],
+                    borderpt=10,
+                    command="MODE_LEFT",
+                    server=server
+                ),
+        "mode": Button(
+                    485, 445, 300, 85,
+                    text=GAME_MODES[0],
+                    textcolor=COLORS["black"],
+                    textfont=FONTS["playbutton"],
+                    buttoncolor=COLORS["yellow_startbutton"],
+                    hovercolor=(199, 198, 197),
+                    bordercolor=COLORS["black"],
+                    borderpt=10,
+                    command=None,
+                    server=server
+                ),
+        "mode_right": Button(
+                    792, 462, 50, 50,
+                    text=">",
+                    textcolor=COLORS["black"],
+                    textfont=FONTS["playbutton"],
+                    buttoncolor=COLORS["yellow_startbutton"],
+                    hovercolor=(199, 198, 197),
+                    bordercolor=COLORS["black"],
+                    borderpt=10,
+                    command="MODE_RIGHT",
                     server=server
                 ),
         "report": Button(
@@ -294,7 +392,7 @@ def init_game_buttons(server):
                     server=server
                 ),
         "title_guide": Button(
-                        490, 515, 300, 100,
+                        485, 540, 300, 85,
                         text="GUIDE",
                         textcolor=COLORS["black"],
                         textfont=FONTS["playbutton"],
@@ -352,5 +450,41 @@ def init_game_buttons(server):
                     borderpt=5,
                     command="RESET",              
                     server=server
-                )
+                ),
+        "close_custom" : Button(
+            xpos=0, ypos=0, width=35, height=35,
+            text="X",
+            textcolor=(255, 255, 255),
+            textfont=FONTS["xwindow"],
+            buttoncolor=(34, 38, 46),
+            hovercolor=(200, 50, 50),
+            bordercolor=(68, 76, 92),
+            borderpt=5,
+            command="CANCEL_CUSTOM"
+        ),
+        "start_custom" : Button(
+            xpos=250, ypos=400, width=140, height=40,
+            text="Start Game",
+            textcolor=(255, 255, 255),
+            textfont=FONTS["btn_font_21"],
+            buttoncolor=(46, 139, 87),
+            hovercolor=(60, 179, 113),
+            bordercolor=(255, 255, 255),
+            borderpt=2,
+            command="CUSTOM_SETUP"
+        ),
+        "alert_ok" : Button(
+            xpos=0,  # Will be dynamically centered inside draw_alert_popup
+            ypos=0,
+            width=100,
+            height=35,
+            text="OK",
+            textcolor=(255, 255, 255),
+            textfont=FONTS["btn_font_21"],
+            buttoncolor=(46, 139, 87),     # Matching SeaGreen theme
+            hovercolor=(60, 179, 113),      # Matching MediumSeaGreen hover
+            bordercolor=(255, 255, 255),
+            borderpt=2,
+            command="DISMISS_ALERT"
+        )
     }

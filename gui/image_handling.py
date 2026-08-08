@@ -3,8 +3,8 @@ Handles Loading and Scaleing of Images
 '''
 import pygame
 import os
-from gui.design_specs import resource_path, SCREEN_RES, ATTACK_FILES, HEALTH_THRESHOLDS, ICON_SIZE, DRAGON_W, DRAGON_H, DEFENSE_GUI_PAGES, GUIDEBOOK_RECT
-from engine.schema import defenses_dict, HOW_TO_PLAY_DATA
+from gui.design_specs import resource_path, SCREEN_RES, ATTACK_FILES, HEALTH_THRESHOLDS, ICON_SIZE, DRAGON_W, DRAGON_H, DEFENSE_GUI_PAGES, GUIDEBOOK_RECT, VISIBLE_DEFENSES
+from engine.schema import defenses_dict, attacks_dict, HOW_TO_PLAY_DATA
 
 class Loader:
     def __init__(self):
@@ -20,7 +20,8 @@ class Loader:
         self.trash_can_img = None
         self.load_all_assets()
 
-    def load_defense_image(self, filename, size=(100, 100)):
+    def load_defense_image(self, filename, size=(90, 90)):
+        # Attempt to load the asset normally
         image = pygame.image.load(resource_path(os.path.join("images", filename))).convert_alpha()
         return pygame.transform.scale(image, size)
     
@@ -43,32 +44,41 @@ class Loader:
             ) for lvl in [25, 50, 75, 100, 125, 150, 175]
         }
         
-        # Attacks
-        for attack_id, filename in ATTACK_FILES.items():
-            img = pygame.image.load(resource_path(os.path.join("images", filename))).convert_alpha()
-            self.attack_images[attack_id] = pygame.transform.scale(img, (90, 90))
-        
-        # Defenses
-        for key in defenses_dict:
-            filename = f"{key.lower()}.png"
+        placeholder_path = resource_path(os.path.join("images", "trash_can.png"))
+        placeholder = pygame.image.load(placeholder_path).convert_alpha()
+
+        # Load every attack in the schema so Random mode can use newly added attacks.
+        for attack_id in attacks_dict:
+            filename = ATTACK_FILES.get(attack_id, f"{attack_id}.png")
             path = resource_path(os.path.join("images", filename))
-            
             if os.path.exists(path):
-                # FIXED: Removed 'self' from the arguments
+                img = pygame.image.load(path).convert_alpha()
+            else:
+                img = placeholder.copy()
+                print(f"[GUI WARNING] Could not find attack image: {path}. Using placeholder.")
+            self.attack_images[attack_id] = pygame.transform.scale(img, (90, 90))
+
+        # Load every defense in the schema. The server decides which ones appear.
+        for key in defenses_dict:
+            filename = f"{key}.png"
+            path = resource_path(os.path.join("images", filename))
+            if os.path.exists(path):
                 self.defense_images[key] = self.load_defense_image(filename)
             else:
-                print(f"[GUI WARNING] Could not find image: {path}. Using placeholder.")
-        
+                self.defense_images[key] = pygame.transform.scale(placeholder.copy(), (80, 80))
+                print(f"[GUI WARNING] Could not find defense image: {path}. Using placeholder.")
+            
         # Guidebook 
         self.guidebook_bg = pygame.image.load(resource_path(os.path.join("images", "guidebook_bg.png"))).convert_alpha()
         self.guidebook_bg = pygame.transform.smoothscale(self.guidebook_bg, (GUIDEBOOK_RECT.width, GUIDEBOOK_RECT.height))
 
         for page in DEFENSE_GUI_PAGES:
-            if page["image"] is not None:
-                page_img = pygame.image.load(resource_path(page["image"])).convert_alpha()
-                page["loaded_image"] = pygame.transform.smoothscale(page_img, (180, 180))
+            page_path = resource_path(page["image"]) if page.get("image") else None
+            if page_path and os.path.exists(page_path):
+                page_img = pygame.image.load(page_path).convert_alpha()
             else:
-                page["loaded_image"] = None
+                page_img = placeholder.copy()
+            page["loaded_image"] = pygame.transform.smoothscale(page_img, (180, 180))
 
         for page in HOW_TO_PLAY_DATA:
             page["loaded_image"] = None

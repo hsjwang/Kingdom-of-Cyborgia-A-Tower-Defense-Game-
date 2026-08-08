@@ -1,4 +1,5 @@
-import random 
+import random
+import math
 from engine.schema import defenses_dict, attacks_dict
 
 
@@ -12,8 +13,8 @@ class Logic:
     
     # function to return list of unique attack ids for that level 
     # Level 1 = 1 attack, Level 2 = 2 attacks, Level 3 = 3 attacks 
-    def get_level_attacks(self, level_number):
-        attack_ids = list(attacks_dict.keys())
+    def get_level_attacks(self, level_number, available_attacks):
+        attack_ids = list(available_attacks.keys())
         count = min(level_number, len(attack_ids))
         return random.sample(attack_ids, count)
     
@@ -38,26 +39,53 @@ class Logic:
     
     # function to check if the defenses defend the attack accurately 
 
-    def calculate_round_results(self, attack_ids, player_defenses):
-        score = 0
-        for attack_id in attack_ids: 
+    def calculate_round_results(self, attack_ids, player_defenses, available_defenses=None):
+        """Return average mitigation coverage across every attack in the level.
+
+        Standard/Custom mode keeps the original behavior: score against every
+        mapped defense for the attack. Random mode passes ``available_defenses``
+        so the denominator includes only matching defenses currently present in
+        the cabinet.
+        """
+        if not attack_ids:
+            return 0
+
+        available_keys = (
+            set(available_defenses.keys())
+            if available_defenses is not None
+            else None
+        )
+
+        attack_scores = []
+        for attack_id in attack_ids:
             attack = attacks_dict.get(attack_id)
-
-            # check if attack exists
             if not attack:
-                return 0
-            
-            required_defenses = attack.defenses 
-            # check if defenses are needed, if not 100% success 
-            if not required_defenses:
-                return 100
-            
-            # score is calculated by the (# required defenses implemented / # required defenses) * 100
-            matches = [d for d in player_defenses if d in required_defenses]
-            score = (len(matches)/len(required_defenses)) * 100 
+                attack_scores.append(0)
+                continue
 
-        return score 
-    
+            mapped_defenses = list(dict.fromkeys(attack.defenses or []))
+            if not mapped_defenses:
+                attack_scores.append(100)
+                continue
+
+            if available_keys is not None:
+                required_defenses = [
+                    d for d in mapped_defenses if d in available_keys
+                ]
+            else:
+                required_defenses = mapped_defenses
+
+            # A Random attack should already have been validated before launch,
+            # but return 0 safely if no corresponding cabinet defense exists.
+            if not required_defenses:
+                attack_scores.append(0)
+                continue
+
+            matches = [d for d in player_defenses if d in required_defenses]
+            attack_scores.append((len(matches) / len(required_defenses)) * 100)
+
+        return sum(attack_scores) / len(attack_scores)
+
     # Success (pass round) if score >= 70
 
     def determine_success(self, score):
@@ -113,7 +141,7 @@ class Logic:
         else: 
             return current_budget + 400
     
-    def generate_failure_hint(self, current_level_attacks, current_defenses, player_budget):
+    def generate_failure_hint(self, current_level_attacks, current_defenses, player_budget, available_defenses=None):
         # 1. Map out which defenses are actually useful for THIS level
         effective_keys = set()
         for attack_id in current_level_attacks:
@@ -125,7 +153,12 @@ class Logic:
         # We create two lists: one for specific counters, one for general availability
         affordable_defenses = []
 
-        for key, defense_obj in defenses_dict.items():
+        # Only recommend defenses the player can currently see/use in the cabinet.
+        # Standard/Custom callers can omit available_defenses and fall back to the
+        # full schema, while Random mode passes its current unlocked pool.
+        defense_pool = available_defenses if available_defenses is not None else defenses_dict
+
+        for key, defense_obj in defense_pool.items():
             if key not in current_defenses and defense_obj.cost <= player_budget:
                 if key in effective_keys:
                     affordable_defenses.append(key)
@@ -138,7 +171,7 @@ class Logic:
         
         # 4. Building the Return Strings
         if chosen_key:
-            defense_obj = defenses_dict.get(chosen_key)
+            defense_obj = available_defenses.get(chosen_key)
             hint_title = f"STRATEGIC ADVICE"
             # Using specific headers and better spacing
             hint_body = (
@@ -216,7 +249,7 @@ class Logic:
 
         return title, body
 
-    def generate_game_over_message(self, attacks, active_defenses):
+    def generate_game_over_message(self, attacks, player_defenses, active_defenses):
         # Identify which attacks were NOT blocked (the ones that caused the loss)
         unblocked_attacks = []
         attack_details_list = []
@@ -224,15 +257,17 @@ class Logic:
         for attack_key in attacks:
             attack_obj = attacks_dict.get(attack_key)
             if attack_obj:
+
+                results = self.calculate_round_results(attacks, player_defenses, active_defenses)
+                score = self.determine_success(results)
                 # Check if any of our active defenses were capable of blocking this
-                blockers = [d for d in active_defenses if d in attack_obj.defenses]
                 
                 # If no active defense matches this attack's requirements, it's a breach
-                if not blockers:
+                if not score:
                     unblocked_attacks.append(attack_obj)
                     attack_details_list.append(
                         f"CRITICAL BREACH: {attack_obj.story_name} [{attack_obj.name}]\n"
-                        f"VULNERABILITY: No active mitigation for {attack_obj.name}.\n"
+                        f"VULNERABILITY: Inadequate mitigations for {attack_obj.name}.\n"
                         f"MITRE DESCRIPTION: {attack_obj.mitre_description}\n"
                         f"REAL WORLD IMPACT: {attack_obj.real_world_examples}\n"
                     )
@@ -249,11 +284,11 @@ class Logic:
 
         # Gaps in Defense
         body += "--- DEFENSE POST-MORTEM ---\n"
-        if active_defenses:
+        if player_defenses:
             body += "ACTIVE AT TIME OF FAILURE:\n"
-            for d_key in active_defenses:
+            for d_key in player_defenses:
                 d_obj = defenses_dict[d_key]
-                body += f" • {d_obj.story_name} (Inactive against current threat vector)\n"
+                body += f" • {d_obj.story_name}\n"
         else:
             body += "WARNING: No active defenses were deployed at the time of breach.\n"
 
@@ -263,3 +298,37 @@ class Logic:
                 "with the observed threat landscape in the next cycle.")
 
         return title, body
+    
+    # function checks if the selected attacks can be mitigated by the selected defenses 
+    def validate_custom_attacks_and_defenses(self, selected_attacks, selected_defenses): 
+        unmitigated_attacks = []
+        for attack_id in selected_attacks:
+            possible_score = self.calculate_round_results([attack_id], selected_defenses, selected_defenses)
+            possible_success = self.determine_success(possible_score)
+          
+            if not possible_success:
+                unmitigated_attacks.append(attack_id)
+        
+        return unmitigated_attacks
+
+    # calculate the budget needed to successfully defend an attack using the available defenses 
+    def calculate_budget_for_attack(self, attack_id, available_defenses, defenses_dict, attacks_dict, multiplier=1.15):
+        attack = attacks_dict.get(attack_id)
+        mitigations = attack.defenses
+
+        # 2. Find costs of valid defenses (defenses in available_defenses that mitigate this attack)
+        valid_costs = sorted([
+            defenses_dict[did].cost 
+            for did in mitigations 
+            if did in available_defenses and did in defenses_dict
+        ])
+
+        if not valid_costs:
+            return 0
+
+        # 3. Calculate cost for 70% of valid mitigations (rounded up)
+        target_count = math.ceil(len(valid_costs) * 0.70)
+        raw_cost = sum(valid_costs[:target_count])
+
+        # 4. Return budget with multiplier cushion (returns directly into self.player_budget)
+        return int(raw_cost * multiplier)

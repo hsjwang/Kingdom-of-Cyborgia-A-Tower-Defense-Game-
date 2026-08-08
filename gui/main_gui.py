@@ -1,11 +1,10 @@
-import pygame, sys, random, math
+import pygame, sys, random
 from pathlib import Path
 from engine.game_server import GameServer
-from engine.schema import attacks_dict
+from engine.schema import HOW_TO_PLAY_DATA
 import gui.design_specs as gs
 import gui.view_renderer as gd
-from gui.design_specs import FONTS, COLORS
-from gui.button import createDefenseButtons, init_game_buttons
+from gui.button import createDefenseButtons, init_game_buttons, handle_custom_screen_click, custom_screen_max_scroll
 from gui.gui_state import UIState
 from gui.image_handling import Loader
 
@@ -62,23 +61,22 @@ def main():
                     # Overwrite the event position so all your .collidepoint calls work
                     event.pos = virtual_mouse_pos
                 # ---------------- ATTACK POPUP SCREEN EVENTS ----------------
+                # If Pop-Up alert is active, capture clicks on the OK button to close it
+                if getattr(gui_state, "show_alert", False):
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        if buttons["alert_ok"].rect.collidepoint(event.pos):
+                            gui_state.show_alert = False
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and gui_state.showing_narrative:
                     if gs.NARRATIVE_CONTINUE_RECT.collidepoint(event.pos):
                         if gui_state.narrative_index < len(server.current_level_attacks) - 1:
                             gui_state.narrative_index += 1
                         else:
                             gui_state.showing_narrative = False # Close popup and start build period
-                
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        if (server.level >=3 or server.player_health <= 0) and gui_state.showing_feedback:
-                            defense_buttons, info_buttons = gui_state.reset_game(server, defense_buttons, fire_list, particles, loader, gs.CASTLE_SPACING, info_buttons)
-                
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         defense_buttons, info_buttons = gui_state.reset_game(server, defense_buttons, fire_list, particles, loader, gs.CASTLE_SPACING, info_buttons)
                 if event.type == pygame.MOUSEWHEEL:
-                    if (server.level >=3 or server.player_health <= 0) and gui_state.showing_feedback:
+                    if (server.is_final_level() or server.player_health <= 0) and gui_state.showing_feedback:
                         # Increase scroll_y
                         gui_state.feedback_scroll_y -= event.y * 30 
                         
@@ -94,23 +92,58 @@ def main():
                         # Clamp between 0 and the max scroll height
                         max_scroll = getattr(gui_state, 'max_feedback_scroll', 0)
                         gui_state.feedback_scroll_y = max(0, min(gui_state.feedback_scroll_y, max_scroll))
+                    if server.state == "CUSTOM_DESIGN_PHASE":
+                        # 1. Pull existing scroll value directly from gui_state
+                        current_scroll = getattr(gui_state, 'custom_scroll_y', 0)
+                        new_scroll = current_scroll - (event.y * 25)
 
+                        # 2. Pass screen.get_size() tuple into custom_screen_max_scroll
+                        gui_state.custom_scroll_y = custom_screen_max_scroll(screen.get_size(), new_scroll)
                 # ---------------- TITLE SCREEN EVENTS ----------------
                 if gui_state.game_state == "Title Screen":
                     # If the guidebook is open, do NOT let Play/Guide title buttons receive clicks underneath it
                     if not gui_state.show_guidebook:
-                        cmd = buttons["play"].check_click(event, gui_state.scroll_y, gs.FIELD_RECT)
+                        left_cmd = buttons["mode_left"].check_click(
+                            event, gui_state.scroll_y, gs.FIELD_RECT, allow_drag=False
+                        )
+                        right_cmd = buttons["mode_right"].check_click(
+                            event, gui_state.scroll_y, gs.FIELD_RECT, allow_drag=False
+                        )
+
+                        if left_cmd == "MODE_LEFT":
+                            gui_state.selected_mode_index = (
+                                gui_state.selected_mode_index - 1
+                            ) % len(gui_state.game_modes)
+                            buttons["mode"].text = gui_state.game_modes[gui_state.selected_mode_index]
+
+                        elif right_cmd == "MODE_RIGHT":
+                            gui_state.selected_mode_index = (
+                                gui_state.selected_mode_index + 1
+                            ) % len(gui_state.game_modes)
+                            buttons["mode"].text = gui_state.game_modes[gui_state.selected_mode_index]
+
+                        cmd = buttons["play"].check_click(
+                            event, gui_state.scroll_y, gs.FIELD_RECT, allow_drag=False
+                        )
                         if cmd == "START_GAME":
-                            print(server.parse_command("START_GAME"))
+                            selected_mode = gui_state.game_modes[gui_state.selected_mode_index]
+                            print(server.parse_command(f"START_GAME {selected_mode}"))
+                            if server.state == "BUILD_PHASE":
+                                createDefenseButtons(
+                                    defense_buttons, server, gs.CASTLE_SPACING,
+                                    info_buttons, loader.defense_images
+                                )
+                                gui_state.scroll_y = 0
                             start_ticks = pygame.time.get_ticks()
                             gui_state.game_state = "Game Screen"
+                            pygame.event.clear(pygame.MOUSEBUTTONDOWN)
+                            pygame.event.clear(pygame.MOUSEBUTTONUP)
                 
-                        guide_cmd = buttons["title_guide"].check_click(event, gui_state.scroll_y, gs.FIELD_RECT)
+                        guide_cmd = buttons["title_guide"].check_click(event, gui_state.scroll_y, gs.FIELD_RECT, allow_drag=False)
                         if guide_cmd == "OPEN_GUIDE":
                             gui_state.show_guidebook = True
                             gui_state.guidebook_section = "menu"
                             gui_state.guidebook_page = 0
-
                 # ---------------- GUIDEBOOK EVENTS (WORKS ON TITLE + GAME SCREEN) ----------------
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and gui_state.show_guidebook:
                     if gs.CLOSE_RECT.collidepoint(event.pos):
@@ -135,7 +168,7 @@ def main():
 
                         elif gs.RIGHT_PAGE_TURN_RECT.collidepoint(event.pos):
                             if gui_state.guidebook_section == "how_to_play":
-                                current_pages = gs.HOW_TO_PLAY_DATA
+                                current_pages = HOW_TO_PLAY_DATA
                             else:
                                 current_pages = gs.DEFENSE_GUI_PAGES
 
@@ -144,7 +177,7 @@ def main():
 
                 # ---------------- GAME SCREEN EVENTS ----------------
                 if gui_state.game_state == "Game Screen":
-                    if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                         # GUARD: Cannot open Intel Reports if Guidebook or Narrative is already visible
                         if not gui_state.show_guidebook and not gui_state.showing_narrative: 
                             if buttons["report"].rect.collidepoint(event.pos) and server.state == "BUILD_PHASE":
@@ -155,6 +188,55 @@ def main():
                         # Check RESET button separately (Keep this outside the intel guard)
                         if buttons["reset"].rect.collidepoint(event.pos):
                             defense_buttons, info_buttons = gui_state.reset_game(server, defense_buttons, fire_list, particles, loader, gs.CASTLE_SPACING, info_buttons)
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        if server.state == "CUSTOM_DESIGN_PHASE":
+                            # 1. Handle Checkbox Toggles
+                            handle_custom_screen_click(
+                                event.pos, 
+                                gui_state.selected_attacks, 
+                                gui_state.selected_defenses, 
+                                screen.get_size(), 
+                                scroll_y=gui_state.custom_scroll_y
+                            )
+
+                            # 2. Check Start Button Click
+                            if buttons["start_custom"].rect.collidepoint(event.pos):
+                                # 1. Filter out only the selected attacks and defenses
+                                chosen_attacks = [atk for atk, selected in gui_state.selected_attacks.items() if selected]
+                                chosen_defenses = [dfn for dfn, selected in gui_state.selected_defenses.items() if selected]
+                                
+                                # 2. Format custom command string
+                                attacks_str = ",".join(chosen_attacks)
+                                defenses_str = ",".join(chosen_defenses)
+                                
+                                # 3. Send custom setup command to the server
+                                print("sending")
+                                cmd_response = server.parse_command(f"START_CUSTOM ATTACKS:{attacks_str} DEFENSES:{defenses_str}")
+                                print(f"Server Response: {cmd_response}")
+
+                                # Extract response string/status
+                                response_msg = str(cmd_response)
+                                is_success = "error" not in response_msg.lower()
+                                # ONLY build game buttons and start if the command was successful
+                                if is_success:
+                                    gui_state.show_custom_modal = False  # Close selection screen
+                                    createDefenseButtons(
+                                        defense_buttons, 
+                                        server, 
+                                        gs.CASTLE_SPACING, 
+                                        info_buttons, 
+                                        loader.defense_images
+                                    )
+                                else:
+                                    gui_state.alert_title = "Test" # "Success" if is_success else "Validation Error"
+                                    gui_state.alert_message = response_msg
+                                    gui_state.show_alert = True 
+                            # 3. Check Close Button Click (Exit to Home Screen)
+                            
+                            if buttons["close_custom"].rect.collidepoint(event.pos):
+                                defense_buttons, info_buttons = gui_state.reset_game(
+                                    server, defense_buttons, fire_list, particles, loader, gs.CASTLE_SPACING, info_buttons
+                                )
 
                     # GUARD: Block sidebar info interaction if any popup/modal is active
                     if not gui_state.showing_narrative and not gui_state.show_guidebook:
@@ -183,8 +265,8 @@ def main():
                         # Open in-game guidebook
                         if gs.GUIDE_RECT.collidepoint(event.pos):
                             gui_state.show_guidebook = True
-                            guidebook_section = "menu"
-                            guidebook_page = 0
+                            gui_state.guidebook_section = "menu"
+                            gui_state.guidebook_page = 0
 
                     allow_drag = (server.state == "BUILD_PHASE") and (not gui_state.show_guidebook) and (not gui_state.showing_narrative)
 
@@ -231,7 +313,8 @@ def main():
                         if event.type == pygame.MOUSEBUTTONDOWN:
                             if buttons["next_level"].rect.collidepoint(event.pos):
                                 print(server.parse_command(buttons["next_level"].command))
-                                createDefenseButtons(defense_buttons, server, gs.CASTLE_SPACING, info_buttons, loader.defense_images) # Reset the Defenses 
+                                createDefenseButtons(defense_buttons, server, gs.CASTLE_SPACING, info_buttons, loader.defense_images) # Reset the Defenses
+                                gui_state.scroll_y = 0
                                 gui_state.feedback_generated = False # Reset for the next victory
                                 gui_state.showing_feedback = False
                                 gui_state.feedback_scroll_y = 0
@@ -242,6 +325,12 @@ def main():
                         if event.type == pygame.MOUSEBUTTONDOWN:
                             if buttons["retry_level"].rect.collidepoint(event.pos):
                                 print(server.parse_command(buttons["retry_level"].command))
+                                if server.game_mode == "RANDOM":
+                                    createDefenseButtons(
+                                        defense_buttons, server, gs.CASTLE_SPACING,
+                                        info_buttons, loader.defense_images
+                                    )
+                                    gui_state.scroll_y = 0
                                 gui_state.feedback_generated = False # Reset for the next potential failure
                                 gui_state.showing_feedback = False
                                 gui_state.feedback_scroll_y = 0
@@ -249,13 +338,13 @@ def main():
 
             # ---------------- DRAW TITLE SCREEN ----------------
             if gui_state.game_state == "Title Screen":
-                gd.draw_title_screen(screen, server.player_health, gui_state, loader, buttons["play"], buttons["title_guide"])
+                gd.draw_title_screen(screen, server.player_health, gui_state, loader, buttons)
 
             # ---------------- DRAW GAME SCREEN ----------------
             elif gui_state.game_state == "Game Screen":
 
                 # Draw the current Background 
-                if server.level >= 3 and server.state == "NEXT_LEVEL": 
+                if server.is_final_level() and server.state == "NEXT_LEVEL": 
                     loader.current_bg = loader.get_current_bg(server.player_health - 25)
                 else: 
                     loader.current_bg = loader.get_current_bg(server.player_health)
@@ -311,7 +400,7 @@ def main():
                         feedback_generated = False
                 
                 # If player has won game and the animation hasn't been played yet, then show the win animation  
-                if server.level >= 3 and server.state == "NEXT_LEVEL" and not gui_state.showing_feedback:
+                if server.is_final_level() and server.state == "NEXT_LEVEL" and not gui_state.showing_feedback:
                     gd.draw_win_animation(screen, gui_state, loader, particles)
 
                 if (server.state in ["NEXT_LEVEL", "LEVEL_FAILED", "GAME_OVER"]) and not gui_state.feedback_generated:
@@ -326,13 +415,31 @@ def main():
 
                 if server.player_health <= 0 and gui_state.showing_feedback:
                     gd.draw_game_over(screen, server.level, server.player_budget, gui_state, server.feedback_body) 
-                if server.state == "NEXT_LEVEL" and server.level >=3 and gui_state.showing_feedback:
+                if server.state == "NEXT_LEVEL" and server.is_final_level() and gui_state.showing_feedback:
                     gd.draw_victory_screen(screen, server.feedback_body, gui_state)
 
-                if (server.state == "LEVEL_FAILED" and server.player_health > 0) or (server.state == "NEXT_LEVEL" and server.level < 3):
+                if (server.state == "LEVEL_FAILED" and server.player_health > 0) or (server.state == "NEXT_LEVEL" and not server.is_final_level()):
                     gui_state.showing_feedback = True
                     gd.draw_feedback(screen, server.state, buttons, server.feedback_title, server.feedback_body, gui_state)
 
+                # Render custom selection modal if active
+                if server.state == "CUSTOM_DESIGN_PHASE": 
+                    gd.draw_custom_screen(
+                        screen, 
+                        gui_state.selected_attacks, 
+                        gui_state.selected_defenses, 
+                        buttons["start_custom"],
+                        buttons["close_custom"], # Add the new close button here
+                        gui_state.custom_scroll_y
+                    )
+                # Render Alert Popup OVER top of everything else if active
+                if getattr(gui_state, "show_alert", False):
+                    gd.draw_alert_popup(
+                        screen, 
+                        message_text=gui_state.alert_message, 
+                        ok_button=buttons["alert_ok"]
+                    )
+                
             # Scale to screen size (display screen is adjustable by user)
             scaled_win = pygame.transform.scale(screen, actual_screen.get_size())
             

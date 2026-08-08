@@ -1,0 +1,207 @@
+# ====================================================================
+#              CYBORGIA KINGDOM: MITRE FRAMEWORK MATRIX
+# ====================================================================
+#  WELCOME INVENTOR! Want to add new attacks, defenses, or edit stories?
+#  Follow these three gold rules to ensure the code reads it properly:
+#
+#  1. SPACES ARE KING: Indentations MUST use regular spaces (press spacebar).
+#     NEVER use the TAB key, or the game logic engine will crash!
+#
+#  2. MULTI-LINE TEXT: If you want to type a long story description or paragraph,
+#     put a vertical line pipe symbol ( | ) right after the label, press Enter,
+#     and write your paragraph indented below it.
+#
+#  3. CONNECTING THE MATRIX: When adding an attack under 'attacks:', look at its
+#     'defenses:' array list. The labels inside (e.g., ["AV", "MFA"]) must 
+#     EXACTLY match the key identifiers you see under the 'defenses:' section.
+# ====================================================================
+#  TEMPLATE TO COPY & PASTE (Delete the "#" to make it active)
+# ====================================================================
+#  defenses:
+#    YOUR_DEFENSE_CODE:
+#      name: "Short Name for UI Button"
+#      mitre_id: "M1234"
+#      cost: 100
+#      mitre_description: "Real-world technical explanation"
+#      real_world_examples: "Real software tools that do this"
+#      story_name: "Medieval Counterpart Name"
+#      story_description: "Lore/Flavor text for the game board"
+#
+#  attacks:
+#    YOUR_ATTACK_CODE:
+#      name: "Short Name for UI Text"
+#      mitre_description: |
+#        Long technical definition of the exploit.
+#      real_world_examples: "Real instances of this attack"
+#      defenses: ["YOUR_DEFENSE_CODE"]  <-- The defense that beats this!
+#      story_name: "Medieval Attack Name"
+#      story_description: "Lore/Flavor text detailing the breach"
+# ====================================================================
+
+# --- HOW TO PLAY DATA ---
+how_to_play:
+  - title: "Welcome to the Kingdom of Cyborgia, located on a server far far away....."
+    description: |
+      The Shadow Guild is at our borders. As the newly appointed Castellan, your job is to allocate the King’s Gold to build the right defenses. You have a limited budget each round—choose wisely. Once a defense is built, it remains part of your castle, but every turn the Guild will try a new, more devious tactic.
+  
+  - title: "Build Phase"
+    description: |
+      You can view the incoming attacks by clicking on the Intel Report button. Defenses are available in the cabinet, with your allocated budget on top. Drag the selected defense to its corresponding location on the game board to purchase it. Once the defenses are placed, they can't be moved. When you are ready, click LOCK DEFENCES to begin the attack.
+  
+  - title: "Attack Phase"
+    description: |
+      Once defenses are locked, the attacker launches threats against your castle. If chosen correctly, your placed defenses help block attacks and protect your health. If chosen incorrectly, you will lose health and have to repeat the level.
+  
+  - title: "Winning and Losing"
+    description: |
+      There are three total levels. Survive each round to move to the next level. If your health reaches zero, the castle falls and the game ends. You can earn additional shield health by successfully passing levels.
+
+
+# --- DEFENSES DATA ---
+defenses:
+  AV:
+    name: "Antivirus"
+    mitre_id: "M1049"
+    cost: 200
+    mitre_description: "Detects and quarantines malicious files"
+    real_world_examples: "Windows Defender or CrowdStrike scanning downloads."
+    story_name: "The Kennel Hounds"
+    story_description: "Trained beasts that sniff out poisoned items, hidden daggers, or any 'unnatural' objects brought into the keep."
+
+  Audit:
+    name: "Audit"
+    mitre_id: "M1047"
+    cost: 100
+    mitre_description: "Logs system events for threat detection"
+    real_world_examples: "SIEM tools like Splunk or Azure Monitor logs."
+    story_name: "The Scribe's Ledger"
+    story_description: "A meticulous monk sits by the gate and records every single soul who enters, leaves, or moves between rooms. It doesn't stop a crime, but it tells you exactly who did it."
+
+  WebRestrict:
+    name: "Web Restrict"
+    mitre_id: "M1021"
+    cost: 300
+    mitre_description: "Blocks malicious domains and payloads"
+    real_world_examples: "Corporate Firewalls or Cisco Umbrella DNS filtering."
+    story_name: "The Portcullis Toll"
+    story_description: "A checkpoint at the edge of the kingdom that stops merchants from known 'enemy lands' and bans the entry of strange, unknown crates."
+
+  Training:
+    name: "User Training"
+    mitre_id: "M1017"
+    cost: 150
+    mitre_description: "Teaches users to spot social engineering"
+    real_world_examples: "Phishing simulations like KnowBe4."
+    story_name: "The Village Drills"
+    story_description: "Regular town halls where peasants are taught that 'The King' will never ask for their gold coins via a random messenger bird."
+
+  OSConfig:
+    name: "OS Hardening"
+    mitre_id: "M1028"
+    cost: 200
+    mitre_description: "Disables risky services and ports"
+    real_world_examples: 'Disabling RDP on workstations; closing unused ports like 445; removing default "Guest" accounts.'
+    story_name: "Wall Reinforcement"
+    story_description: "Laborers fill in old cracks, seal unused drainage pipes, and remove hidden 'thief holes' in the masonry."
+
+  PAM:
+    name: "PAM"
+    mitre_id: "M1026"
+    cost: 250
+    mitre_description: "Enforces least-privilege admin access"
+    real_world_examples: "CyberArk, HashiCorp Vault, or requiring 'sudo' for every command with timed sessions."
+    story_name: "The Royal Guard"
+    story_description: "Elite soldiers who shadow high- ranking officials. They ensure only the most trusted hands touch the Royal Scepter."
+
+  RestrictPerms:
+    name: "Permissions"
+    mitre_id: "M1022"
+    cost: 250
+    mitre_description: "Locks down sensitive system folders"
+    real_world_examples: "Linux 'chmod' settings, Windows NTFS permissions, or cloud IAM bucket policies."
+    story_name: "Iron-Bound Chests"
+    story_description: "Sensitive documents are locked in specific rooms. A cook doesn't need the key to the armory, and a stablehand doesn't need the key to the treasury."
+
+  MFA:
+    name: "MFA"
+    mitre_id: "M1032"
+    cost: 250
+    mitre_description: "Requires secondary login verification"
+    real_world_examples: "Google Authenticator, Duo Push, or YubiKeys."
+    story_name: "The Two-Key Vault"
+    story_description: "Requires a physical seal and a secret whisper. Even if a guard's keys are stolen, the vault stays shut."
+
+  DataBackup:
+    name: "Data Backup"
+    mitre_id: "M1053"
+    cost: 100
+    mitre_description: "Creates restorable copies of critical data"
+    real_world_examples: "Veeam backups stored on an air-gapped server or AWS S3 Glacier."
+    story_name: "The Scribe's Vault"
+    story_description: "Keeps reserve copies of the kingdom's records so losses can be restored after an attack."
+
+  RemoteData:
+    name: "Remote Data Storage"
+    mitre_id: "M1029"
+    cost: 200
+    mitre_description: "Off-site data storage to prevent local loss"
+    real_world_examples: 'Off-site disaster recovery sites or "The Cloud" (Azure/AWS/GCP).'
+    story_name: "The Outland Post"
+    story_description: "Stores copies far from the castle so a local disaster cannot destroy everything at once."
+
+  SSLInspect:
+    name: "SSL/TLS Inspection"
+    mitre_id: "M1020"
+    cost: 200
+    mitre_description: "Decrypts traffic to find hidden threats"
+    real_world_examples: "Fortinet Deep Packet Inspection or Palo Alto Networks SSL decryption."
+    story_name: "The Royal Inquisitor"
+    story_description: "Examines sealed deliveries for hidden dangers before allowing them into the keep."
+
+
+# --- ATTACKS DATA ---
+attacks:
+  T1566:
+    name: "Phishing"
+    mitre_description: |
+      Adversaries may send phishing messages to gain access to victim systems. All forms of phishing are centered on tricking a user into performing a specific action, such as clicking a link or opening an attachment, often to execute malicious code or harvest credentials.
+    real_world_examples: "Emails, SMS, or chat messages that look legitimate but contain malicious payloads or links to fake login pages."
+    defenses: ["AV", "Audit", "WebRestrict", "Training"]
+    story_name: "Poisoned Messenger"
+    story_description: "A courier is delivering a letter, but the ink is infused with a toxin designed to incapacitate whoever handles the parchment."
+
+  T1552:
+    name: "Unsecured Credentials"
+    mitre_description: |
+      Adversaries may search local system sources to find insecurely stored credentials. These can include passwords, certificates, or tokens stored in files (like .txt or .config), environment variables, or the system registry.
+    real_world_examples: 'A developer leaving a "passwords.txt" file on their desktop or hardcoding an API key into a script that everyone in the company can read.'
+    defenses: ["Audit", "OSConfig", "PAM", "RestrictPerms", "Training"]
+    story_name: "Undercover Spy"
+    story_description: "A member of the Shadow Guild is infiltrating the castle in the guise of a servant, searching for physical keys left on hooks or eavesdropping on whispered secrets in the corridors."
+
+  T1098:
+    name: "Account Manipulation"
+    mitre_description: |
+      Adversaries may manipulate accounts to maintain access to victim systems. This includes modifying account permissions, adding new accounts to privileged groups (like "Domain Admins"), or resetting passwords to take over existing legitimate accounts.
+    real_world_examples: 'After gaining initial access, an attacker adds their own "backdoor" account to the server's Administrators group so they can log in easily later.'
+    defenses: ["MFA", "OSConfig", "PAM", "RestrictPerms"]
+    story_name: "Corrupt Seneschal"
+    story_description: "An enemy agent is attempting to bribe the castle's record-keeper to alter the laws of the realm. They want to be declared a Duke, providing them with unrestricted access to the castle gates."
+
+  T1027:
+    name: "Obfuscated Files"
+    mitre_description: |
+      Adversaries may attempt to make an executable or file difficult to discover or analyze by encrypting, encoding, or otherwise concealing its contents. This is intended to bypass security tools (like Antivirus) that look for known malicious signatures.
+    real_world_examples: 'Using "packing software" or complex encoding (like Base64) to hide a virus\'s code so that it looks like random, harmless text to a scanner.'
+    defenses: ["AV", "Audit", "Training"]
+    story_name: "Trojan Crate"
+    story_description: "A merchant is trying to enter the castle with a crate of supposedly standard supplies. This crate may house a magical parasite made to spread through and weaken the castle's stone structure."
+
+  T1059:
+    name: "Command and Scripting Interpreter"
+    mitre_description: |
+      Adversaries may abuse command and script interpreters to execute commands, scripts, or binaries. These interfaces (like PowerShell, Python, or Windows Command Shell) are powerful tools that attackers use to interact with systems and automate their activities.
+    real_world_examples: "An attacker uses a PowerShell script to automatically download more malware or scan the internal network for other vulnerable computers."
+    defenses: ["AV", "Audit", "PAM", "WebRestrict"]
+    story_name: "Sorcerer’s Script"
+    story_description: "An enemy mage stands beyond the castle walls, chanting ancient, complex commands to his Shadow Guild. These incantations are designed to exploit the mechanical logic of the drawbridge, forcing it to lower against the will of the defenders."
