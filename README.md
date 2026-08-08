@@ -1,8 +1,8 @@
 # Kingdom of Cyborgia
 
-**A tower-defense educational game that teaches MITRE ATT&CK and D3FEND concepts to high school students.**
+**A tower-defense educational game that teaches MITRE ATT&CK and Mitigation concepts to high school students.**
 
-Players take on the role of the Castellan — the defender of a castle kingdom under siege by the Shadow Guild. Each attack the Guild launches maps directly to a real [MITRE ATT&CK](https://attack.mitre.org) technique. Each defense the player deploys maps to a real [MITRE D3FEND](https://d3fend.mitre.org) mitigation. Players must allocate a limited budget strategically across three escalating levels, learning through consequence that cybersecurity is fundamentally about tradeoffs, resource allocation, and risk management under uncertainty.
+Players take on the role of the Castellan — the defender of a castle kingdom under siege by the Shadow Guild. Each attack the Guild launches maps directly to a real [MITRE ATT&CK](https://attack.mitre.org) technique. Each defense the player deploys maps to a real [MITRE ATT&CK Mitigations](https://attack.mitre.org). Players must allocate a limited budget strategically across three escalating levels, learning through consequence that cybersecurity is fundamentally about tradeoffs, resource allocation, and risk management under uncertainty.
 
 Developed as an undergraduate capstone project. Presented at [SIGCSE TS 2027 — citation to be added upon publication].
 
@@ -33,7 +33,7 @@ kingdom-of-cyborgia/
 ├── engine/
 │   ├── game_server.py        # State management and phase transitions
 │   ├── logic.py              # Budget, health, attack–defense mapping, round resolution
-│   └── schema.py             # ATT&CK attack and D3FEND defense dictionaries
+│   └── schema.py             # ATT&CK attack and mitigation defense dictionaries
 ├── gui/
 │   ├── main_gui.py           # Entry point and main game loop
 │   ├── button.py             # Button and defense icon components
@@ -45,8 +45,8 @@ kingdom-of-cyborgia/
 ├── images/                   # Game assets
 ├── fonts/                    # Font files
 ├── docs/
-│   ├── MITRE Game Teacher Resource Guide.pdf
-│   └── MITRE Game User Guide.pdf
+│   ├── MITRE ATT&CK Game Teacher Resource Guide.pdf
+│   └── MITRE ATT&CK Game User Guide.pdf
 ├── requirements.txt
 ├── CITATION.cff
 ├── CONTRIBUTING.md
@@ -80,7 +80,7 @@ The game progresses through three levels of escalating difficulty.
 ### Phase 1 — Build Phase
 - Click the **Intel Report** button to see which attacks are incoming.
 - Drag defenses from the cabinet onto the castle map to deploy them.
-- Each defense displays its story name, MITRE D3FEND identifier, and technical description.
+- Each defense displays its story name, MITRE ATT&CK Mitigation identifier, and technical description.
 - Consult the **Guidebook** at any time for a full breakdown of every defense and attack.
 - Defenses can be refunded by dragging them to the trash can during this phase.
 
@@ -100,21 +100,34 @@ The game progresses through three levels of escalating difficulty.
 - Health carries over between levels. If it hits zero, the kingdom falls.
 - Budget wisely — not all defenses counter all attacks.
 
+### Game Modes
+
+The game features three distinct gameplay modes tailored to different learning objectives, skill levels, and strategic playstyles:
+
+* **Beginner Mode:** Features a structured, three-level simulation where players defend against a tiered progression of attacks that gradually increase in difficulty and threat complexity. Using a set of 11 defenses and 5 attacks, players manage an initial budget and must strategically purchase and commit to defenses (including decoys) before viewing attack outcomes.
+* **Random Mode:** Maximizes replayability by introducing unpredictability into every session. The mode starts players with 10 initial defenses, then randomly shuffles and unlocks 5 defenses while generating 1 to 3 random attacks per level. To ensure fairness, the system dynamically calculates budgets and validates attack combinations so every level remains winnable, automatically resetting the environment and generating a new scenario upon completion.
+* **Custom Mode:** Designed for educators and students looking to target specific cyber threats and mitigations. This mode provides full control by allowing players to manually select the exact attacks and defense systems in play. The system verifies strategy viability and dynamically computes budgets to guarantee that custom scenarios are balanced and beatable.
+
 ---
 
-## MITRE ATT&CK / D3FEND Coverage
+## MITRE ATT&CK / Mitigation Coverage
 
-The current release covers **5 ATT&CK techniques** and **11 D3FEND mitigations**:
+The project covers **10 ATT&CK techniques** and **26 unique Mitigations**:
 
-| ATT&CK Technique | ID | Story Name | Valid D3FEND Mitigations |
-|---|---|---|---|
-| Phishing | T1566 | Poisoned Messenger | Antivirus (M1049), Audit (M1047), Web Restrict (M1021), User Training (M1017) |
-| Unsecured Credentials | T1552 | Undercover Spy | Audit (M1047), OS Hardening (M1028), PAM (M1026), Permissions (M1022), User Training (M1017) |
-| Account Manipulation | T1098 | Corrupt Seneschal | MFA (M1032), OS Hardening (M1028), PAM (M1026), Permissions (M1022) |
-| Obfuscated Files | T1027 | Trojan Crate | Antivirus (M1049), Audit (M1047), User Training (M1017) |
-| Command & Scripting Interpreter | T1059 | Sorcerer's Script | Antivirus (M1049), Audit (M1047), PAM (M1026), Web Restrict (M1021) |
+| ATT&CK Technique | ID | Tactic(s) | Status | Valid Mitigations |
+|---|---|---|---|---|
+| Phishing | T1566 | Initial Access | Implemented | M1049 (Antivirus), M1047 (Audit), M1021 (Web Restrict), M1017 (User Training), M1031 (Network NIPS), M1054 (Software Config) |
+| Unsecured Credentials | T1552 | Credential Access | Implemented | M1047 (Audit), M1028 (OS Hardening), M1026 (PAM), M1022 (Permissions), M1017 (User Training), M1015 (User Account Control), M1041 (Encrypt Info), M1037 (Filter Traffic), M1035 (SSL/TLS Inspection), M1027 (Password Policies), M1051 (Update Software) |
+| Account Manipulation | T1098 | Persistence, Privilege Escalation | Implemented | M1032 (MFA), M1028 (OS Hardening), M1026 (PAM), M1022 (Permissions), M1042 (Disable Features), M1030 (Network Segmentation), M1018 (User Account Management) |
+| Obfuscated Files | T1027 | Defense Evasion | Implemented | M1049 (Antivirus), M1047 (Audit), M1017 (User Training), M1040 (Behavioral Analytics) |
+| Command and Scripting Interpreter | T1059 | Execution | Implemented | M1049 (Antivirus), M1047 (Audit), M1026 (PAM), M1021 (Web Restrict), M1040 (Behavioral Analytics), M1045 (Code Signing), M1042 (Disable Features), M1038 (Execution Prevention), M1033 (Limit Software) |
+| User Execution | T1204 | Execution | Planned | M1040 (Behavioral Analytics), M1038 (Execution Prevention), M1033 (Limit Software), M1031 (Network NIPS), M1021 (Web Restrict), M1017 (User Training) |
+| Adversary-in-the-Middle | T1557 | Credential Access, Collection | Planned | M1017 (User Training), M1030 (Network Segmentation), M1031 (Network NIPS), M1035 (SSL/TLS Inspection), M1037 (Filter Traffic), M1041 (Encrypt Info), M1042 (Disable Features) |
+| Application Layer Protocol | T1071 | Command and Control | Planned | M1037 (Filter Traffic), M1031 (Network NIPS) |
+| Endpoint Denial of Service | T1499 | Impact | Planned | M1037 (Filter Traffic) |
+| Exfiltration Over Alternative Protocol | T1048 | Exfiltration | Planned | M1018 (User Account Management), M1022 (Permissions), M1030 (Network Segmentation), M1031 (Network NIPS), M1037 (Filter Traffic) |
 
-Planned future releases will expand coverage to a larger subset of the ATT&CK and D3FEND frameworks. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add new techniques.
+Planned future releases will expand coverage to a larger subset of the ATT&CK and Mitigations framework. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add new techniques.
 
 ---
 
@@ -123,7 +136,7 @@ Planned future releases will expand coverage to a larger subset of the ATT&CK an
 Download the **Teacher Resource Guide** from the `docs/` folder or the Releases page. It includes:
 - Learning objectives aligned to the game's mechanics
 - Suggested pre/post discussion questions
-- A glossary of MITRE ATT&CK and D3FEND terms encountered in the game
+- A glossary of MITRE ATT&CK and Mitigations terms encountered in the game
 - Three classroom integration patterns:
   - **Standalone session** (45–60 minutes): Play, then debrief using Incident Reports as discussion artifacts
   - **Curriculum complement**: Deploy at the start of a cybersecurity unit to motivate the content that follows
@@ -150,12 +163,12 @@ We are also proposing *Kingdom of Cyborgia* as a **SIGCSE Nifty Assignment** can
 
 ## Extending the Game
 
-The game is designed for easy extension. All ATT&CK techniques and D3FEND mitigations live in a single file (`engine/schema.py`). Adding a new attack or defense requires only adding an entry to the relevant dictionary — no changes to the game engine or frontend are needed. See [CONTRIBUTING.md](CONTRIBUTING.md) for step-by-step instructions.
+The game is designed for easy extension. All ATT&CK techniques and mitigations live in a single file (`engine/schema.py`). Adding a new attack or defense requires only adding an entry to the relevant dictionary — no changes to the game engine or frontend are needed. See [CONTRIBUTING.md](CONTRIBUTING.md) for step-by-step instructions.
 
 **Planned extensions:**
 - Randomized attack mode (no Intel Report hint) for advanced play
 - Constrained procurement mode (randomized available defenses at each level)
-- Expanded ATT&CK/D3FEND coverage across a broader subset of the framework
+- Expanded ATT&CK/Mitigation coverage across a broader subset of the framework
 - Web-based deployment for Chromebook and mobile environments
 
 ---
@@ -166,7 +179,6 @@ The game is designed for easy extension. All ATT&CK techniques and D3FEND mitiga
 - [pygame](https://www.pygame.org)
 - [PyInstaller](https://pyinstaller.org) — for cross-platform executable packaging
 - [MITRE ATT&CK](https://attack.mitre.org) — adversary tactics and techniques
-- [MITRE D3FEND](https://d3fend.mitre.org) — defensive countermeasures
 
 ---
 

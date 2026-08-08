@@ -6,6 +6,7 @@ import pygame
 
 from pathlib import Path
 import sys
+from engine.schema import defenses_dict, attacks_dict
 
 if getattr(sys, "frozen", False):
     BASE_DIR = Path(sys.executable).resolve().parent
@@ -94,6 +95,7 @@ COLORS = {
 
 FONTS = {
     "playbutton": pygame.font.Font(resource_path("fonts", "freesansbold.ttf"), 33),
+    "custom_start": pygame.font.Font(resource_path("fonts", "freesansbold.ttf"), 30),
     "transitionbutton": pygame.font.Font(resource_path("fonts", "freesansbold.ttf"), 28),
     "title": pygame.font.Font(resource_path("fonts", "freesansbold.ttf"), 22),
     "home_title": pygame.font.Font(resource_path("fonts", "freesansbold.ttf"), 45),
@@ -103,7 +105,7 @@ FONTS = {
     "health": pygame.font.Font(resource_path("fonts", "freesansbold.ttf"), 35),
     "small": pygame.font.Font(resource_path("fonts", "freesansbold.ttf"), 16),
     "end_desc": pygame.font.Font(resource_path("fonts", "freesansbold.ttf"), 23),
-    "dfont": pygame.font.Font(resource_path("fonts", "freesansbold.ttf"), 14),
+    "dfont": pygame.font.Font(resource_path("fonts", "freesansbold.ttf"), 15),
     "level": pygame.font.Font(resource_path("fonts", "freesansbold.ttf"), 27),
     "xwindow": pygame.font.SysFont("arial", 30),  
     "guide_text": pygame.font.SysFont("georgia", 20),  
@@ -117,7 +119,7 @@ FONTS = {
     "label_font": pygame.font.Font(resource_path(os.path.join("fonts", "freesansbold.ttf")), 16),
     "phase": pygame.font.Font(resource_path(os.path.join("fonts", "freesansbold.ttf")), 25),
     "guide": pygame.font.Font(resource_path(os.path.join("fonts", "freesansbold.ttf")), 22),
-    "hints": pygame.font.Font(resource_path(os.path.join("fonts", "freesansbold.ttf")), 21)
+    "hints": pygame.font.Font(resource_path(os.path.join("fonts", "freesansbold.ttf")), 21),
 }
 
 FONTS["header"].set_bold(True)
@@ -129,147 +131,65 @@ FONTS["phase"].set_bold(True)
 FONTS["guide"].set_bold(True)
 
 
-ATTACK_FILES = {
-    "T1566": "T1566.png",
-    "T1552": "T1552.png",
-    "T1098": "T1098.png",
-    "T1027": "T1027.png",
-    "T1059": "T1059.png",
-    # "T1055": "T1055.png",
-}
+ATTACK_FILES = {attack_id: f"{attack_id}.png" for attack_id in attacks_dict}
 
+
+#button.py
 CASTLE_SOCKETS = {
-    "AV": (815, 300),            # Top of front left tower
-    "Audit": (965, 300),         # Top of front right tower
-    "WebRestrict": (900, 500),   # Front gate
-    "Training": (580, 300),  # Top of middle left tower
-    "OSConfig": (660, 470),      # Left front wall
-    "PAM": (1150, 550),           # Walkway to front gate in front of people
-    "RestrictPerms": (700, 170),   # Top of tower
-    "MFA": (710, 280),           # Font of top tower (middle above glowing bit)
-    "DataBackup": (520, 240),    # Top left of tower
-    "RemoteData": (1200, 450), # Left far back behind castle
-    "SSLInspect": (1000, 540)     # Middle of bridge behind PAM, infront of gates
+    "M1049": (815, 300),            # Top of front left tower
+    "M1047": (965, 300),         # Top of front right tower
+    "M1021": (900, 500),   # Front gate
+    "M1017": (580, 300),  # Top of middle left tower
+    "M1028": (660, 470),      # Left front wall
+    "M1026": (1150, 550),           # Walkway to front gate in front of people
+    "M1022": (700, 170),   # Top of tower
+    "M1032": (710, 280),           # Font of top tower (middle above glowing bit)
+    "M1053": (520, 240),    # Top left of tower
+    "M1029": (1200, 450), # Left far back behind castle
+    "M1020": (1000, 540),     # Middle of bridge behind PAM, infront of gates
+    "M1015": (1200, 200), 
+    "M1018": (1200, 550), 
+    "M1027": (800, 600), 
+    "M1030": (350, 390), 
+    "M1031": (800, 200), 
+    "M1033": (260, 380), 
+    "M1035": (700, 600), 
+    "M1037": (1050, 440), 
+    "M1038": (880, 380), 
+    "M1040": (1100, 260), 
+    "M1041": (900, 300), 
+    "M1042": (520, 550), 
+    "M1045": (650, 350), 
+    "M1051": (480, 410), 
+    "M1054": (440, 300) # regen
 }
 
-
-# --- How to play data for the guide pages --- 
-HOW_TO_PLAY_DATA = [
-    {
-        "title": "Welcome to the Kingdom of Cyborgia, located on a server far far away.....",
-        "description": "The Shadow Guild is at our borders. As the newly appointed Castellan, your job is to allocate the King’s Gold to build the right defenses. You have a limited budget each round—choose wisely. Once a defense is built, it remains part of your castle, but every turn the Guild will try a new, more devious tactic."
-    },
-    {
-        "title": "Build Phase",
-        "description": "You can view the incoming attacks by clicking on the Intel Report button. Defenses are available in the cabinet, with your allocated budget on top. Drag the selected defense to its correpsonding location on the game board to purchase it. Once the defenses are placed, they can't be moved. When you are ready, click LOCK DEFENCES to begin the attack."
-    },
-    {
-        "title": "Attack Phase",
-        "description": "Once defenses are locked, the attacker launches threats against your castle. If chosen correctly, your placed defenses help block attacks and protect your health. If chosen incorrectly, you will lose health and have to repeat the level."
-    },
-    {
-        "title": "Winning and Losing",
-        "description": "There are three total levels. Survive each round to move to the next level. If your health reaches zero, the castle falls and the game ends. You can earn additional shield health by successfully passing levels."
-    }
-]
-
-# --- Defense metadata for the guidebook --- 
-DEFENSE_GUI_PAGES = [
-    {
-        "title": "The Kennel Hounds",
-        "description": "Trained beasts that sniff out poisoned items, hidden daggers, or any 'unnatural' objects brought into the keep.",
-        "image": os.path.join("images", "av.png")
-    },
-    {
-        "title": "The Scribe’s Ledger",
-        "description": "A meticulous monk sits by the gate and records every single soul who enters, leaves, or moves between rooms. It doesn't stop a crime, but it tells you exactly who did it.",
-        "image": os.path.join("images", "audit.png")
-    },
-    {
-        "title": "The Scribe's Vault",
-        "description": "Keeps reserve copies of the kingdom's records so losses can be restored after an attack.",
-        "image": os.path.join("images", "databackup.png")
-    },
-    {
-        "title": "The Portcullis Toll:",
-        "description": "A checkpoint at the edge of the kingdom that stops merchants from known 'enemy lands' and bans the entry of strange, unknown crates.",
-        "image": os.path.join("images", "webrestrict.png")
-    },
-    {
-        "title": "The Village Drills:",
-        "description": "Regular town halls where peasants are taught that 'The King' will never ask for their gold coins via a random messenger bird.",
-        "image": os.path.join("images", "training.png")
-    },
-    {
-        "title": "Stone Wall Reinforcement:",
-        "description": "Laborers fill in old cracks, seal unused drainage pipes, and remove hidden 'thief holes' in the masonry.",
-        "image": os.path.join("images", "osconfig.png")
-    },
-    {
-        "title": "The Outland Post",
-        "description": "Stores copies far from the castle so a local disaster cannot destroy everything at once.",
-        "image": os.path.join("images", "remotedata.png")
-    },
-    {
-        "title": "The Royal Guard:",
-        "description": "Elite soldiers who shadow high- ranking officials. They ensure only the most trusted hands touch the Royal Scepter.",
-        "image": os.path.join("images", "pam.png")
-    },
-    {
-        "title": "Iron-Bound Chests:",
-        "description": "Sensitive documents are locked in specific rooms. A cook doesn't need the key to the armory, and a stablehand doesn't need the key to the treasury.",
-        "image": os.path.join("images", "restrictperms.png")
-    },
-    {
-        "title": "The Royal Inquisitor",
-        "description": "Examines sealed deliveries for hidden dangers before allowing them into the keep.",
-        "image": os.path.join("images", "sslinspect.png")
-    },
-    {
-        "title": "The Two-Key Vault:",
-        "description": "Requires a physical seal and a secret whisper. Even if a guard's keys are stolen, the vault stays shut.",
-        "image": os.path.join("images", "mfa.png")
-    }
-]
-
+# visible defenses in beginner mode 
 VISIBLE_DEFENSES = [
-    "AV",
-    "Audit",
-    "DataBackup",
-    "WebRestrict",
-    "Training",
-    "OSConfig",
-    "RemoteData",
-    "PAM",
-    "RestrictPerms",
-    "SSLInspect",
-    "MFA",
+    "M1049",
+    "M1047",
+    "M1053",
+    "M1021",
+    "M1026",
+    "M1017",
+    "M1028",
+    "M1029",
+    "M1032",
+    "M1022",
+    "M1020"
 ]
 
-NARRATIVE_NAMES = {
-    "AV": "The Kennel Hounds",
-    "Audit": "The Scribe's Ledger",
-    "WebRestrict": "The Portcullis Toll",
-    "Training": "The Village Drills",
-    "OSConfig": "Wall Reinforcement",
-    "PAM": "The Royal Guard",
-    "RestrictPerms": "Iron-Bound Chests",
-    "MFA": "The Two-Key Vault",
-    "DataBackup": "The Scribe's Vault",
-    "RemoteData": "The Outland Post",
-    "SSLInspect": "The Royal Inquisitor"
-}
+DEFENSE_GUI_PAGES = []
 
-DEFENSE_KEYS = [
-    "AV",
-    "Audit",
-    "DataBackup",
-    "WebRestrict",
-    "Training",
-    "OSConfig",
-    "RemoteData",
-    "PAM",
-    "RestrictPerms",
-    "SSLInspect",
-    "MFA"
-]
+for key, defense in defenses_dict.items():
+    image_filename = f"{defense.id}.png" 
+    image_path = os.path.join("images", image_filename)
+
+    # Missing images are handled by Loader with a placeholder.
+    page_data = {
+        "defense_key": key,
+        "title": defense.story_name,
+        "description": defense.story_description,
+        "image": image_path,
+    }
+    DEFENSE_GUI_PAGES.append(page_data)
