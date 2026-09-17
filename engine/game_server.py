@@ -1,9 +1,11 @@
 import itertools
 import math
+import os
 import random
 
 from engine.schema import defenses_dict, attacks_dict, VISIBLE_DEFENSES, VISIBLE_ATTACKS
 from engine.logic import Logic 
+from engine.telemetry import TelemetrySession
 
 # Random values for now
 GAME_MODE_SETTINGS = {
@@ -29,7 +31,21 @@ class GameServer:
         print("[SERVER] Initializing MITRE ATT&CK Game Server...")
 
         # initialize logic  
+        # Set CYBORGIA_SEED to make the attack draw deterministic, so every
+        # student in a section faces the identical scenario. Leave unset for
+        # ordinary play.
+        self._seed = os.environ.get("CYBORGIA_SEED")
+        if self._seed:
+            try:
+                random.seed(int(self._seed))
+            except ValueError:
+                random.seed(self._seed)
         self.logic = Logic()
+        # Classroom telemetry. Writes a local .jsonl the student submits.
+        # Disable with CYBORGIA_TELEMETRY=0; set code with CYBORGIA_PARTICIPANT.
+        self.telemetry = TelemetrySession()
+        if self._seed:
+            self.telemetry.note("seed", seed=self._seed)
         self.available_defenses = filtered_defenses = {
             key: defenses_dict[key] 
             for key in VISIBLE_DEFENSES 
@@ -290,6 +306,12 @@ class GameServer:
             self.current_level_attacks = self.logic.get_level_attacks(
                 self.level, self.available_attacks
             )
+        self.telemetry.level_start(
+            self.level, self.game_mode, self.current_level_attacks,
+            list(self.available_defenses.keys()),
+            list(self.active_defenses.keys()),
+            self.player_budget, self.player_health,
+        )
 
     # --- Feature 3.d: Game play handler functions ---
     
@@ -308,8 +330,15 @@ class GameServer:
             # Track which level the defense was placed on
             self.active_defenses[defense_key] = self.level 
             
+            self.telemetry.purchase(
+                defense_key, defense.name, defense.cost,
+                self.player_budget, self.level,
+            )
             return f"[SERVER] Defense '{defense.name}' built successfully."
         except ValueError as e:
+            self.telemetry.purchase_rejected(
+                defense_key, e, self.player_budget, self.level,
+            )
             return f"[SERVER] ERROR: {str(e)}"
         
     def handle_remove_defense(self, defense_key):
@@ -318,6 +347,10 @@ class GameServer:
             defense = self.available_defenses[defense_key]
             self.player_budget += defense.cost
             del self.active_defenses[defense_key]
+            self.telemetry.refund(
+                defense_key, defense.name, defense.cost,
+                self.player_budget, self.level,
+            )
             return f"[SERVER] Defense '{defense.name}' removed. ${defense.cost} refunded."
         return f"[SERVER] ERROR: Defense '{defense_key}' is not active."
 
@@ -326,6 +359,10 @@ class GameServer:
         attacks = self.current_level_attacks
         if not self.current_level_attacks:
             f"[SERVER] ERROR: No attacks'."
+        self.telemetry.launch(
+            self.level, self.current_level_attacks,
+            list(self.active_defenses.keys()), self.player_budget,
+        )
         # launch every attack for this level 
         for attack in self.current_level_attacks:
             if attack in self.available_attacks:
@@ -352,24 +389,21 @@ class GameServer:
             return "[SERVER] ERROR: No attack was launched."
 
         # 1. Get score from logic 
-        if self.game_mode == "RANDOM":
-            score = self.logic.calculate_round_results(
-                self.current_level_attacks,
-                list(self.active_defenses.keys()),
-                available_defenses=self.available_defenses,
-            )
-        else:
-            score = self.logic.calculate_round_results(
-                self.current_level_attacks,
-                list(self.active_defenses.keys()),
-                available_defenses=self.available_defenses,
-            )
+        # All modes score against the defenses actually purchasable in the
+        # current cabinet. Do NOT change this to the full schema mapping:
+        # beginner mode would become mathematically unwinnable (T1566 caps at
+        # 4/6 = 67%, T1552 at 5/11 = 45%, both below the 70% threshold).
+        score = self.logic.calculate_round_results(
+            self.current_level_attacks,
+            list(self.active_defenses.keys()),
+            available_defenses=self.available_defenses,
+        )
         
         success = self.logic.determine_success(score)
         
         if success:
             attacks_str = ", ".join(self.current_level_attacks)
-            result_msg = f"[SERVER] SUCCESS: Attacks '{attacks_str}' were BLOCKED. (+250 Budget, +25 Health)"
+            result_msg = f"[SERVER] SUCCESS: Attacks '{attacks_str}' were BLOCKED. (+450 Budget, +25 Health)"
             self.number_failures = 0
         else:
             attacks_str = ", ".join(self.current_level_attacks)
@@ -380,10 +414,20 @@ class GameServer:
         # update budget and health according to the logic
         self.player_health = self.logic.calculate_new_health(self.player_health, self.number_failures, success)
         self.player_budget = self.logic.calculate_new_budget(self.player_budget, self.number_failures, success)
+
+        self.telemetry.round_result(
+            score, success, list(self.active_defenses.keys()),
+            self.player_budget, self.player_health, self.level,
+            self.current_level_attacks, self.number_failures,
+        )
         
         # Check for Game Over, else move to transition states (level failed or next level)
         if self.player_health <= 0:
             self.state = "GAME_OVER"
+            self.telemetry.game_over(
+                self.level, self.player_health, self.player_budget,
+                self.number_failures, self.current_level_attacks,
+            )
             return result_msg + "\n[SERVER] SYSTEM COMPROMISED. Health reached 0. GAME OVER."
         elif self.state == "LEVEL_FAILED":
             return result_msg + f"\n[SERVER] Level Failed. You must pass the level to move on. State: BUILD_PHASE. Level: {self.level}"
@@ -458,6 +502,9 @@ class GameServer:
             self.player_shield = 0
             self.player_budget = settings["starting_budget"]
             self.active_defenses = {}
+            self.telemetry.session_start(
+                self.game_mode, self.player_health, self.player_budget,
+            )
             self.number_failures = 0
             self.feedback_title = ""
             self.feedback_body = ""
@@ -575,6 +622,10 @@ class GameServer:
                 previous_level = self.level
                 self.level += 1
                 self.state = "BUILD_PHASE"
+                self.telemetry.level_complete(
+                    previous_level, self.level,
+                    self.player_budget, self.player_health,
+                )
                 if self.game_mode == "RANDOM":
                     self._reset_level_resources()
                 self.setup_current_level()
@@ -594,6 +645,7 @@ class GameServer:
             return f"[SERVER STATUS] Mode: {self.game_mode} | Level: {self.level} | Health: {self.player_health} | Shield: {self.player_shield} | Budget: {self.player_budget} | State: {self.state}"
         elif action == "EXIT":
             self.is_running = False
+            self.telemetry.session_end("exit")
             return "[SERVER] Shutting down."
         elif action == "GET_FEEDBACK":
             if self.state == "GAME_OVER":

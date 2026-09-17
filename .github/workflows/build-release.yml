@@ -1,0 +1,76 @@
+name: Build Release Binaries
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            artifact: kingdom-of-cyborgia-linux
+            binary: dist/kingdom-of-cyborgia
+          - os: windows-latest
+            artifact: kingdom-of-cyborgia-windows
+            binary: dist/kingdom-of-cyborgia.exe
+          - os: macos-latest
+            artifact: kingdom-of-cyborgia-macos
+            binary: dist/kingdom-of-cyborgia
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build
+        run: pyinstaller kingdom-of-cyborgia.spec
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.binary }}
+          if-no-files-found: error
+
+  release:
+    name: Attach binaries to release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Rename binaries per platform
+        run: |
+          mkdir -p release
+          cp artifacts/kingdom-of-cyborgia-linux/kingdom-of-cyborgia release/kingdom-of-cyborgia-linux-x86_64
+          cp artifacts/kingdom-of-cyborgia-macos/kingdom-of-cyborgia release/kingdom-of-cyborgia-macos
+          cp artifacts/kingdom-of-cyborgia-windows/kingdom-of-cyborgia.exe release/kingdom-of-cyborgia-windows.exe
+          chmod +x release/kingdom-of-cyborgia-linux-x86_64 release/kingdom-of-cyborgia-macos
+
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          generate_release_notes: true

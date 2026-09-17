@@ -1,6 +1,19 @@
 # python object for a defense 
+#: Mitigations checked against D3FEND and confirmed to have NO leaf-technique
+#: equivalent. D3FEND models only technical countermeasures, so human-centered
+#: and policy-posture controls legitimately have none. Membership here means
+#: "looked up and absent", as distinct from an empty d3fend list meaning
+#: "not yet looked up".
+D3FEND_NO_EQUIVALENT = {
+    "M1017",  # User Training -- human-centered control
+    "M1029",  # Remote Data Storage -- storage location, not a mechanism
+    "M1033",  # Limit Software Installation -- policy posture
+    "M1042",  # Disable or Remove Feature or Program -- policy posture
+}
+
+
 class Defense: 
-    def __init__(self, mitre_id, name, cost, mitre_description, real_world_examples, story_name, story_description):
+    def __init__(self, mitre_id, name, cost, mitre_description, real_world_examples, story_name, story_description, d3fend=None):
         self.id = mitre_id
         self.name = name 
         self.cost = cost
@@ -8,6 +21,40 @@ class Defense:
         self.real_world_examples = real_world_examples
         self.story_name = story_name
         self.story_description = story_description
+
+        # MITRE D3FEND alignment: a list of (technique_id, display_name) pairs.
+        # D3FEND publishes mappings from its countermeasures to ATT&CK
+        # *techniques*, not to ATT&CK *Mitigations*, so this correspondence is
+        # a semantic alignment we authored, not a MITRE-published crosswalk.
+        # An empty list means no technical equivalent exists -- D3FEND models
+        # only technical countermeasures, so administrative and human-centered
+        # controls legitimately have none.
+        #
+        # MAPPING POLICY: leaf techniques only. Do not use D3FEND parent
+        # classes (e.g. D3-CH Credential Hardening, D3-CE Credential
+        # Eviction), because they hierarchically contain leaves already
+        # assigned elsewhere -- D3-MFA sits under D3-CH and is assigned to
+        # M1032, D3-SPP sits under D3-CH and is assigned to M1027. Mixing
+        # levels would make this column mean two different things.
+        self.d3fend = list(d3fend) if d3fend else []
+
+    @property
+    def d3fend_ids(self):
+        """e.g. 'D3-UAP, D3-AL' or '' when no equivalent exists."""
+        return ", ".join(tid for tid, _ in self.d3fend)
+
+    @property
+    def d3fend_label(self):
+        """e.g. 'D3-SCA (System Call Analysis)' or 'no technical equivalent'."""
+        if not self.d3fend:
+            return "no technical equivalent"
+        return ", ".join(f"{tid} ({nm})" for tid, nm in self.d3fend)
+
+    @property
+    def framework_line(self):
+        """One-line identifier string for in-game display."""
+        short = self.name.split(" (")[0]
+        return f"{short}\nATT&CK: {self.id}    D3FEND: {self.d3fend_label}"
 
 # python object for an attack 
 class Attack:
@@ -48,82 +95,106 @@ VISIBLE_ATTACKS = [
 # defenses dictionary 
 defenses_dict = {
     "M1049": Defense("M1049", "Antivirus/Antimalware", 200, "Detects and quarantines malicious files", "Windows Defender or CrowdStrike scanning downloads.",
-                  "The Kennel Hounds", "Trained beasts that sniff out poisoned items, hidden daggers, or any 'unnatural' objects brought into the keep."),
+                  "The Kennel Hounds", "Trained beasts that sniff out poisoned items, hidden daggers, or any 'unnatural' objects brought into the keep.",
+                  d3fend=[("D3-FH", "File Hashing")]),
     
     "M1047": Defense("M1047", "Audit", 100, "Logs system events for threat detection", "SIEM tools like Splunk or Azure Monitor logs.",
-                     "The Scribe's Ledger", "A meticulous monk sits by the gate and records every single soul who enters, leaves, or moves between rooms. It doesn't stop a crime, but it tells you exactly who did it."),
+                     "The Scribe's Ledger", "A meticulous monk sits by the gate and records every single soul who enters, leaves, or moves between rooms. It doesn't stop a crime, but it tells you exactly who did it.",
+                  d3fend=[("D3-SCA", "System Call Analysis")]),
     
     "M1021": Defense("M1021", "Web Restrict (Restrict Web-Based Content)", 300, "Blocks malicious domains and payloads", "Corporate Firewalls or Cisco Umbrella DNS filtering.",
-                           "The Portcullis Toll", "A checkpoint at the edge of the kingdom that stops merchants from known 'enemy lands' and bans the entry of strange, unknown crates."),
+                           "The Portcullis Toll", "A checkpoint at the edge of the kingdom that stops merchants from known 'enemy lands' and bans the entry of strange, unknown crates.",
+                  d3fend=[("D3-NTF", "Network Traffic Filtering")]),
     
     "M1017": Defense("M1017", "User Training", 150, "Teaches users to spot social engineering", "Phishing simulations like KnowBe4.",
-                        "The Village Drills", "Regular town halls where peasants are taught that 'The King' will never ask for their gold coins via a random messenger bird."),
+                        "The Village Drills", "Regular town halls where peasants are taught that 'The King' will never ask for their gold coins via a random messenger bird.",
+                  d3fend=[]),
     
     "M1028": Defense("M1028", "OS Hardening (Operating System Configuration)", 200, "Disables risky services and ports", "Disabling RDP on workstations; closing unused ports like 445; removing default \"Guest\" accounts.",
-                        "Wall Reinforcement", "Laborers fill in old cracks, seal unused drainage pipes, and remove hidden 'thief holes' in the masonry."),
+                        "Wall Reinforcement", "Laborers fill in old cracks, seal unused drainage pipes, and remove hidden 'thief holes' in the masonry.",
+                  d3fend=[("D3-PH", "Platform Hardening")]),
     
     "M1026": Defense("M1026", "PAM", 250, "Enforces least-privilege admin access", "CyberArk, HashiCorp Vault, or requiring 'sudo' for every command with timed sessions.",
-                   "The Royal Guard", "Elite soldiers who shadow high- ranking officials. They ensure only the most trusted hands touch the Royal Scepter."),
+                   "The Royal Guard", "Elite soldiers who shadow high- ranking officials. They ensure only the most trusted hands touch the Royal Scepter.",
+                  d3fend=[("D3-UAP", "User Account Permissions")]),
     
     "M1022": Defense("M1022", "Permissions (Restrict File and Directory Permissions)", 250, "Locks down sensitive system folders", "Linux 'chmod' settings, Windows NTFS permissions, or cloud IAM bucket policies.",
-                            "Iron-Bound Chests", "Sensitive documents are locked in specific rooms. A cook doesn't need the key to the armory, and a stablehand doesn't need the key to the treasury."),
+                            "Iron-Bound Chests", "Sensitive documents are locked in specific rooms. A cook doesn't need the key to the armory, and a stablehand doesn't need the key to the treasury.",
+                  d3fend=[("D3-LFP", "Local File Permissions")]),
     
     "M1032": Defense("M1032", "MFA", 250, "Requires secondary login verification", "Google Authenticator, Duo Push, or YubiKeys.",
-                   "The Two-Key Vault", "Requires a physical seal and a secret whisper. Even if a guard's keys are stolen, the vault stays shut."),
+                   "The Two-Key Vault", "Requires a physical seal and a secret whisper. Even if a guard's keys are stolen, the vault stays shut.",
+                  d3fend=[("D3-MFA", "Multi-factor Authentication")]),
     
     "M1053" : Defense("M1053", "Data Backup", 100, "Creates restorable copies of critical data", "Veeam backups stored on an air-gapped server or AWS S3 Glacier.",
-                           "The Scribe's Vault", "Keeps reserve copies of the kingdom's records so losses can be restored after an attack."),
+                           "The Scribe's Vault", "Keeps reserve copies of the kingdom's records so losses can be restored after an attack.",
+                  d3fend=[("D3-RD", "Restore Database")]),
     
     "M1029" : Defense("M1029", "Remote Data Storage", 200, "Off-site data storage to prevent local loss", "Off-site disaster recovery sites or \"The Cloud\" (Azure/AWS/GCP).",
-                           "The Outland Post", "Stores copies far from the castle so a local disaster cannot destroy everything at once."),
+                           "The Outland Post", "Stores copies far from the castle so a local disaster cannot destroy everything at once.",
+                  d3fend=[]),
     
     "M1020" : Defense("M1020", "SSL/TLS Inspection", 200, "Decrypts traffic to find hidden threats", "Fortinet Deep Packet Inspection or Palo Alto Networks SSL decryption.",
-                           "The Royal Inquisitor", "Examines sealed deliveries for hidden dangers before allowing them into the keep."),
+                           "The Royal Inquisitor", "Examines sealed deliveries for hidden dangers before allowing them into the keep.",
+                  d3fend=[("D3-MENCR", "Message Encryption")]),
     
     "M1015" : Defense("M1015", "Active Directory Configuration", 200, "Configures directory services securely to prevent privilege escalation and credential theft", "Disabling LLMNR/NBT-NS, restricting Domain Admin logins to Tier 0 systems, and enforcing SMB signing.",
-                           "The Royal Lineage", "A strict hierarchy of nobles and titles is enforced. A mere squire cannot simply declare themselves a Duke to command the castle guards or access the treasury."),
+                           "The Royal Lineage", "A strict hierarchy of nobles and titles is enforced. A mere squire cannot simply declare themselves a Duke to command the castle guards or access the treasury.",
+                  d3fend=[("D3-DTP", "Domain Trust Policy")]),
     
     "M1018" : Defense("M1018", "User Account Management", 150, "Manages the lifecycle of user accounts to limit unnecessary or stale privileges", "Disabling inactive accounts, performing quarterly access reviews, and enforcing strict offboarding processes.",
-                           "The Steward's Roster", "The Steward actively revokes castle access from mercenaries whose contracts have expired and banishes idle loiterers from the courtyard."),
+                           "The Steward's Roster", "The Steward actively revokes castle access from mercenaries whose contracts have expired and banishes idle loiterers from the courtyard.",
+                  d3fend=[("D3-UAP", "User Account Permissions"), ("D3-AL", "Account Locking")]),
     
     "M1027" : Defense("M1027", "Password Policies", 100, "Enforces strong password complexity, length, and rotation requirements", "Enforcing a minimum 14-character length, blocking common phrases, and preventing password reuse.",
-                           "The Riddler's Gate", "Guards demand a complex, ever-changing passphrase from travelers—no more using \"password\" or the King's birthday to gain entry."),        
+                           "The Riddler's Gate", "Guards demand a complex, ever-changing passphrase from travelers—no more using \"password\" or the King's birthday to gain entry.",
+                  d3fend=[("D3-CDP", "Change Default Password"), ("D3-PR", "Password Rotation"), ("D3-SPP", "Strong Password Policy")]),        
     
     "M1030" : Defense("M1030", "Network Segmentation", 250, "Divides a network into smaller, isolated segments to contain lateral movement during a breach", "Isolating the guest Wi-Fi from corporate networks, using VLANs, and setting up internal firewalls.",
-                           "The Walled Districts", "The castle is divided into isolated rings. Even if the outer bailey falls to the Shadow Guild, the inner keep remains sealed behind raised drawbridges."),
+                           "The Walled Districts", "The castle is divided into isolated rings. Even if the outer bailey falls to the Shadow Guild, the inner keep remains sealed behind raised drawbridges.",
+                  d3fend=[("D3-BDI", "Broadcast Domain Isolation")]),
     
     "M1031" : Defense("M1031", "Network Intrusion Prevention", 300, "Monitors network traffic to actively detect and block malicious exploits", "Deploying Snort, Suricata, or Cisco Firepower IPS appliances to drop packets matching known exploit patterns.",
-                           "The Tower Ballistas", "Vigilant archers actively scan the horizon, immediately shooting down any incoming projectiles, siege weapons, or suspicious ravens before they land."),
+                           "The Tower Ballistas", "Vigilant archers actively scan the horizon, immediately shooting down any incoming projectiles, siege weapons, or suspicious ravens before they land.",
+                  d3fend=[("D3-CAA", "Connection Attempt Analysis")]),
     
     "M1033" : Defense("M1033", "Limit Software Installation", 150, "Restricts users from installing unauthorized software applications", "Removing local administrator privileges from standard users and using AppLocker or GPOs to block unapproved installers.",
                            "The Blacksmith's Seal", "Only tools and weapons forged by the official royal armory are allowed. Peasants are forbidden from bringing their own makeshift swords into the barracks."),
    
     "M1035" : Defense("M1035", "Limit Access to Resource Over Network", 200, "Restricts access to specific network resources based on logical business needs", "Restricting SSH or database management ports to only accept connections from a dedicated admin jump box.",
-                           "The Privy Council", "Only designated, high-ranking advisors are allowed into the map room; the doors are completely hidden and walled off from the rest of the kingdom."),
+                           "The Privy Council", "Only designated, high-ranking advisors are allowed into the map room; the doors are completely hidden and walled off from the rest of the kingdom.",
+                  d3fend=[("D3-DNR", "Decoy Network Resource"), ("D3-NRAM", "Network Resource Access Mediation")]),
     
     "M1037" : Defense("M1037", "Filter Network Traffic", 200, "Filters incoming and outgoing network traffic based on IP addresses, ports, or protocols", "Configuring stateless or stateful network firewalls (like AWS Security Groups) to drop unapproved inbound connections.",
-                           "The Customs Officers", "Guards rigorously inspect all incoming merchant carts and outgoing messengers, turning away anyone lacking the proper royal travel permits."),
+                           "The Customs Officers", "Guards rigorously inspect all incoming merchant carts and outgoing messengers, turning away anyone lacking the proper royal travel permits.",
+                  d3fend=[("D3-NTSA", "Network Traffic Signature Analysis"), ("D3-ANAA", "Administrative Network Activity Analysis")]),
     
     "M1038" : Defense("M1038", "Execution Prevention", 250, "Blocks unauthorized scripts, binaries, or untrusted code from executing on endpoints", "Using Microsoft AppLocker, WDAC, or application whitelisting tools to run only verified software.",
-                           "The King's Decree", "A magical ward that instantly paralyzes anyone attempting to cast unauthorized spells or read from forbidden tomes within the castle walls."),
+                           "The King's Decree", "A magical ward that instantly paralyzes anyone attempting to cast unauthorized spells or read from forbidden tomes within the castle walls.",
+                  d3fend=[("D3-EDL", "Executable Denylisting")]),
     
     "M1040" : Defense("M1040", "Behavior Prevention on Endpoint", 250, "Monitors and blocks active processes exhibiting suspicious or anomalous behavior patterns", "EDR tools like CrowdStrike or SentinelOne blocking a standard word processor from suddenly launching a command shell.",
-                           "The Suspicion Ward", "Guards closely monitor the behavior of the staff. If the court jester suddenly starts drawing a sword instead of juggling, he is tackled immediately."),
+                           "The Suspicion Ward", "Guards closely monitor the behavior of the staff. If the court jester suddenly starts drawing a sword instead of juggling, he is tackled immediately.",
+                  d3fend=[("D3-LAM", "Local Account Monitoring")]),
     
     "M1041" : Defense("M1041", "Encrypt Sensitive Information", 200, "Encrypts sensitive data at rest or in transit to protect confidentiality from unauthorized eyes", "Using BitLocker for full disk encryption or enforcing TLS 1.3 for all web data transmissions.",
-                           "The Ciphered Scrolls", "Royal decrees are written in a dead, magical language. Even if a Shadow Guild spy steals the scroll, they cannot read a single word of it."),
+                           "The Ciphered Scrolls", "Royal decrees are written in a dead, magical language. Even if a Shadow Guild spy steals the scroll, they cannot read a single word of it.",
+                  d3fend=[("D3-DENCR", "Disk Encryption"), ("D3-FE", "File Encryption"), ("D3-MENCR", "Message Encryption")]),
     
     "M1042" : Defense("M1042", "Disable or Remove Feature or Program", 150, "Disables or removes unnecessary software features or protocols to reduce the overall attack surface", "Disabling macros in Microsoft Office or completely turning off legacy protocols like TLS 1.0 and SMBv1.",
                            "The Sealed Catacombs", "Laborers purposely collapse old, forgotten tunnels and board up abandoned secret passages so thieves cannot use them to bypass the gates."),
     
     "M1045" : Defense("M1045", "Code Signing", 200, "Digitally signs software to verify the identity of the author and ensure it hasn't been altered", "Verifying valid Microsoft, Apple, or custom internal developer certificates before allowing software to run.",
-                           "The Royal Wax Seal", "Every official missive must bear the King's enchanted wax seal. Forgeries lacking the proper crest are immediately thrown into the hearth."),
+                           "The Royal Wax Seal", "Every official missive must bear the King's enchanted wax seal. Forgeries lacking the proper crest are immediately thrown into the hearth.",
+                  d3fend=[("D3-EAL", "Executable Allowlisting")]),
     
     "M1051" : Defense("M1051", "Update Software", 150, "Applies security patches to software and operating systems to remediate known vulnerabilities", "Running monthly Windows Update cycles or patching vulnerable open-source dependencies (like Log4j updates).",
-                           "The Mason's Upkeep", "Stonemasons constantly patch weathering walls, reinforce rusting iron gates, and upgrade the defenses against newly discovered Shadow Guild siege tactics."),
+                           "The Mason's Upkeep", "Stonemasons constantly patch weathering walls, reinforce rusting iron gates, and upgrade the defenses against newly discovered Shadow Guild siege tactics.",
+                  d3fend=[("D3-SWI", "Software Inventory"), ("D3-SU", "Software Update"), ("D3-RS", "Restore Software")]),
 
     "M1054" : Defense("M1054", "Software Configuration", 150, "Configures software applications securely to minimize corporate risk and enforce safety baselines", 
-                           "Configuring web browsers via GPO to block malicious extensions, disable pop-ups, and enforce strict privacy settings.", "The Keep's Protocols", "Strict rules govern the castle's daily operations. Fires must be extinguished at night, and weapons must be locked away, ensuring the castle operates safely."),
+                           "Configuring web browsers via GPO to block malicious extensions, disable pop-ups, and enforce strict privacy settings.", "The Keep's Protocols", "Strict rules govern the castle's daily operations. Fires must be extinguished at night, and weapons must be locked away, ensuring the castle operates safely.",
+                  d3fend=[("D3-ACH", "Application Configuration Hardening"), ("D3-DRA", "Disable Remote Access")]),
 
 }
 

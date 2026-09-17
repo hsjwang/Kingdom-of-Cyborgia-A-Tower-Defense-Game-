@@ -1,41 +1,77 @@
 # ====================================================================
 #              CYBORGIA KINGDOM: MITRE FRAMEWORK MATRIX
 # ====================================================================
-#  WELCOME INVENTOR! Want to add new attacks, defenses, or edit stories?
-#  Follow these three gold rules to ensure the code reads it properly:
+#  THIS FILE IS DOCUMENTATION, NOT CONFIGURATION.
+#
+#  The game loads its content from engine/schema.py, NOT from this file.
+#  This YAML mirrors schema.py so contributors can read the full content
+#  set in one place and see the required shape of a new entry. If you
+#  change gameplay content, change schema.py and update this file to match.
+#
+#  Generated from engine/schema.py. Keys are MITRE identifiers, matching
+#  schema.py exactly (earlier revisions of this file used short codes such
+#  as "AV" and listed only the Beginner-mode subset).
+# ====================================================================
+#  FOUR GOLD RULES
 #
 #  1. SPACES ARE KING: Indentations MUST use regular spaces (press spacebar).
-#     NEVER use the TAB key, or the game logic engine will crash!
+#     NEVER use the TAB key.
 #
-#  2. MULTI-LINE TEXT: If you want to type a long story description or paragraph,
-#     put a vertical line pipe symbol ( | ) right after the label, press Enter,
-#     and write your paragraph indented below it.
+#  2. MULTI-LINE TEXT: For a long description, put a vertical pipe ( | )
+#     right after the label, press Enter, and indent the paragraph below it.
 #
-#  3. CONNECTING THE MATRIX: When adding an attack under 'attacks:', look at its
-#     'defenses:' array list. The labels inside (e.g., ["AV", "MFA"]) must 
-#     EXACTLY match the key identifiers you see under the 'defenses:' section.
+#  3. CONNECTING THE MATRIX: Each attack's "defenses:" list holds the keys
+#     of the mitigations that counter it. Every label must EXACTLY match a
+#     key under "defenses:".
+#
+#  4. D3FEND IS OPTIONAL AND LEAF-LEVEL ONLY. The "d3fend:" list holds
+#     MITRE D3FEND *leaf* techniques that implement the mitigation. Never
+#     use a D3FEND parent class (e.g. D3-CH Credential Hardening, D3-NTA
+#     Network Traffic Analysis, D3-UBA User Behavior Analysis), because a
+#     parent contains leaves already assigned to other mitigations and the
+#     column would stop meaning one thing. An empty list means either
+#     "no equivalent exists" or "not yet checked" -- see
+#     D3FEND_NO_EQUIVALENT in schema.py, which records the confirmed
+#     absences.
 # ====================================================================
-#  TEMPLATE TO COPY & PASTE (Delete the "#" to make it active)
+#  TWO DISTINCT TAXONOMIES -- DO NOT CONFLATE
+#
+#    M#### = an ATT&CK *Mitigation*  (a broad category of defensive practice)
+#    D3-*  = a D3FEND *Technique*    (a specific implementing mechanism)
+#    T#### = an ATT&CK *Technique*   (an adversary behaviour, i.e. an attack)
+#
+#  D3FEND publishes mappings to ATT&CK Techniques, not to ATT&CK
+#  Mitigations, so the M#### -> D3-* correspondence in this file is an
+#  alignment authored by this project, not a MITRE-published crosswalk.
+# ====================================================================
+#  TEMPLATE TO COPY & PASTE (delete the "#" to make it active)
 # ====================================================================
 #  defenses:
-#    YOUR_DEFENSE_CODE:
-#      name: "Short Name for UI Button"
-#      mitre_id: "M1234"
-#      cost: 100
+#    M1234:
+#      name: "Mitigation name as ATT&CK states it"
+#      mitre_id: "M1234"              # ATT&CK Mitigation ID
+#      cost: 200                      # 100-300
+#      d3fend:                        # leaf techniques; omit or [] if none
+#        - id: "D3-XXX"
+#          name: "D3FEND technique name"
+#      visible_in_beginner: false     # true also requires adding the key to
+#                                     # VISIBLE_DEFENSES in schema.py
 #      mitre_description: "Real-world technical explanation"
 #      real_world_examples: "Real software tools that do this"
 #      story_name: "Medieval Counterpart Name"
-#      story_description: "Lore/Flavor text for the game board"
+#      story_description: "Lore text for the game board"
 #
 #  attacks:
-#    YOUR_ATTACK_CODE:
-#      name: "Short Name for UI Text"
+#    T1234:
+#      name: "Technique name as ATT&CK states it"
+#      mitre_id: "T1234"              # ATT&CK Technique ID
+#      defenses: ["M1234"]            # mitigation keys that counter it
+#      visible_in_beginner: false     # true also requires VISIBLE_ATTACKS
 #      mitre_description: |
-#        Long technical definition of the exploit.
+#        Long technical definition of the technique.
 #      real_world_examples: "Real instances of this attack"
-#      defenses: ["YOUR_DEFENSE_CODE"]  <-- The defense that beats this!
 #      story_name: "Medieval Attack Name"
-#      story_description: "Lore/Flavor text detailing the breach"
+#      story_description: "Lore text detailing the breach"
 # ====================================================================
 
 # --- HOW TO PLAY DATA ---
@@ -57,151 +93,521 @@ how_to_play:
       There are three total levels. Survive each round to move to the next level. If your health reaches zero, the castle falls and the game ends. You can earn additional shield health by successfully passing levels.
 
 
-# --- DEFENSES DATA ---
+# --- DEFENSES DATA (26 total, 11 visible in Beginner mode) ---
 defenses:
-  AV:
-    name: "Antivirus"
-    mitre_id: "M1049"
+
+  M1049:
+    name: Antivirus/Antimalware
+    mitre_id: M1049
     cost: 200
-    mitre_description: "Detects and quarantines malicious files"
-    real_world_examples: "Windows Defender or CrowdStrike scanning downloads."
-    story_name: "The Kennel Hounds"
-    story_description: "Trained beasts that sniff out poisoned items, hidden daggers, or any 'unnatural' objects brought into the keep."
+    d3fend:
+    - id: D3-FH
+      name: File Hashing
+    visible_in_beginner: true
+    mitre_description: Detects and quarantines malicious files
+    real_world_examples: Windows Defender or CrowdStrike scanning downloads.
+    story_name: The Kennel Hounds
+    story_description: Trained beasts that sniff out poisoned items, hidden daggers, or any 'unnatural' objects brought into the keep.
 
-  Audit:
-    name: "Audit"
-    mitre_id: "M1047"
+  M1047:
+    name: Audit
+    mitre_id: M1047
     cost: 100
-    mitre_description: "Logs system events for threat detection"
-    real_world_examples: "SIEM tools like Splunk or Azure Monitor logs."
-    story_name: "The Scribe's Ledger"
-    story_description: "A meticulous monk sits by the gate and records every single soul who enters, leaves, or moves between rooms. It doesn't stop a crime, but it tells you exactly who did it."
+    d3fend:
+    - id: D3-SCA
+      name: System Call Analysis
+    visible_in_beginner: true
+    mitre_description: Logs system events for threat detection
+    real_world_examples: SIEM tools like Splunk or Azure Monitor logs.
+    story_name: The Scribe's Ledger
+    story_description: A meticulous monk sits by the gate and records every single soul who enters, leaves, or moves between rooms. It doesn't stop a crime, but it tells you exactly who did it.
 
-  WebRestrict:
-    name: "Web Restrict"
-    mitre_id: "M1021"
+  M1021:
+    name: Web Restrict (Restrict Web-Based Content)
+    mitre_id: M1021
     cost: 300
-    mitre_description: "Blocks malicious domains and payloads"
-    real_world_examples: "Corporate Firewalls or Cisco Umbrella DNS filtering."
-    story_name: "The Portcullis Toll"
-    story_description: "A checkpoint at the edge of the kingdom that stops merchants from known 'enemy lands' and bans the entry of strange, unknown crates."
+    d3fend:
+    - id: D3-NTF
+      name: Network Traffic Filtering
+    visible_in_beginner: true
+    mitre_description: Blocks malicious domains and payloads
+    real_world_examples: Corporate Firewalls or Cisco Umbrella DNS filtering.
+    story_name: The Portcullis Toll
+    story_description: A checkpoint at the edge of the kingdom that stops merchants from known 'enemy lands' and bans the entry of strange, unknown crates.
 
-  Training:
-    name: "User Training"
-    mitre_id: "M1017"
+  M1017:
+    name: User Training
+    mitre_id: M1017
     cost: 150
-    mitre_description: "Teaches users to spot social engineering"
-    real_world_examples: "Phishing simulations like KnowBe4."
-    story_name: "The Village Drills"
-    story_description: "Regular town halls where peasants are taught that 'The King' will never ask for their gold coins via a random messenger bird."
+    d3fend: []
+    d3fend_status: confirmed_no_equivalent
+    visible_in_beginner: true
+    mitre_description: Teaches users to spot social engineering
+    real_world_examples: Phishing simulations like KnowBe4.
+    story_name: The Village Drills
+    story_description: Regular town halls where peasants are taught that 'The King' will never ask for their gold coins via a random messenger bird.
 
-  OSConfig:
-    name: "OS Hardening"
-    mitre_id: "M1028"
+  M1028:
+    name: OS Hardening (Operating System Configuration)
+    mitre_id: M1028
     cost: 200
-    mitre_description: "Disables risky services and ports"
-    real_world_examples: 'Disabling RDP on workstations; closing unused ports like 445; removing default "Guest" accounts.'
-    story_name: "Wall Reinforcement"
-    story_description: "Laborers fill in old cracks, seal unused drainage pipes, and remove hidden 'thief holes' in the masonry."
+    d3fend:
+    - id: D3-PH
+      name: Platform Hardening
+    visible_in_beginner: true
+    mitre_description: Disables risky services and ports
+    real_world_examples: Disabling RDP on workstations; closing unused ports like 445; removing default "Guest" accounts.
+    story_name: Wall Reinforcement
+    story_description: Laborers fill in old cracks, seal unused drainage pipes, and remove hidden 'thief holes' in the masonry.
 
-  PAM:
-    name: "PAM"
-    mitre_id: "M1026"
+  M1026:
+    name: PAM
+    mitre_id: M1026
     cost: 250
-    mitre_description: "Enforces least-privilege admin access"
-    real_world_examples: "CyberArk, HashiCorp Vault, or requiring 'sudo' for every command with timed sessions."
-    story_name: "The Royal Guard"
-    story_description: "Elite soldiers who shadow high- ranking officials. They ensure only the most trusted hands touch the Royal Scepter."
+    d3fend:
+    - id: D3-UAP
+      name: User Account Permissions
+    visible_in_beginner: true
+    mitre_description: Enforces least-privilege admin access
+    real_world_examples: CyberArk, HashiCorp Vault, or requiring 'sudo' for every command with timed sessions.
+    story_name: The Royal Guard
+    story_description: Elite soldiers who shadow high- ranking officials. They ensure only the most trusted hands touch the Royal Scepter.
 
-  RestrictPerms:
-    name: "Permissions"
-    mitre_id: "M1022"
+  M1022:
+    name: Permissions (Restrict File and Directory Permissions)
+    mitre_id: M1022
     cost: 250
-    mitre_description: "Locks down sensitive system folders"
-    real_world_examples: "Linux 'chmod' settings, Windows NTFS permissions, or cloud IAM bucket policies."
-    story_name: "Iron-Bound Chests"
-    story_description: "Sensitive documents are locked in specific rooms. A cook doesn't need the key to the armory, and a stablehand doesn't need the key to the treasury."
+    d3fend:
+    - id: D3-LFP
+      name: Local File Permissions
+    visible_in_beginner: true
+    mitre_description: Locks down sensitive system folders
+    real_world_examples: Linux 'chmod' settings, Windows NTFS permissions, or cloud IAM bucket policies.
+    story_name: Iron-Bound Chests
+    story_description: Sensitive documents are locked in specific rooms. A cook doesn't need the key to the armory, and a stablehand doesn't need the key to the treasury.
 
-  MFA:
-    name: "MFA"
-    mitre_id: "M1032"
+  M1032:
+    name: MFA
+    mitre_id: M1032
     cost: 250
-    mitre_description: "Requires secondary login verification"
-    real_world_examples: "Google Authenticator, Duo Push, or YubiKeys."
-    story_name: "The Two-Key Vault"
-    story_description: "Requires a physical seal and a secret whisper. Even if a guard's keys are stolen, the vault stays shut."
+    d3fend:
+    - id: D3-MFA
+      name: Multi-factor Authentication
+    visible_in_beginner: true
+    mitre_description: Requires secondary login verification
+    real_world_examples: Google Authenticator, Duo Push, or YubiKeys.
+    story_name: The Two-Key Vault
+    story_description: Requires a physical seal and a secret whisper. Even if a guard's keys are stolen, the vault stays shut.
 
-  DataBackup:
-    name: "Data Backup"
-    mitre_id: "M1053"
+  M1053:
+    name: Data Backup
+    mitre_id: M1053
     cost: 100
-    mitre_description: "Creates restorable copies of critical data"
-    real_world_examples: "Veeam backups stored on an air-gapped server or AWS S3 Glacier."
-    story_name: "The Scribe's Vault"
-    story_description: "Keeps reserve copies of the kingdom's records so losses can be restored after an attack."
+    d3fend:
+    - id: D3-RD
+      name: Restore Database
+    visible_in_beginner: true
+    mitre_description: Creates restorable copies of critical data
+    real_world_examples: Veeam backups stored on an air-gapped server or AWS S3 Glacier.
+    story_name: The Scribe's Vault
+    story_description: Keeps reserve copies of the kingdom's records so losses can be restored after an attack.
 
-  RemoteData:
-    name: "Remote Data Storage"
-    mitre_id: "M1029"
+  M1029:
+    name: Remote Data Storage
+    mitre_id: M1029
     cost: 200
-    mitre_description: "Off-site data storage to prevent local loss"
-    real_world_examples: 'Off-site disaster recovery sites or "The Cloud" (Azure/AWS/GCP).'
-    story_name: "The Outland Post"
-    story_description: "Stores copies far from the castle so a local disaster cannot destroy everything at once."
+    d3fend: []
+    d3fend_status: confirmed_no_equivalent
+    visible_in_beginner: true
+    mitre_description: Off-site data storage to prevent local loss
+    real_world_examples: Off-site disaster recovery sites or "The Cloud" (Azure/AWS/GCP).
+    story_name: The Outland Post
+    story_description: Stores copies far from the castle so a local disaster cannot destroy everything at once.
 
-  SSLInspect:
-    name: "SSL/TLS Inspection"
-    mitre_id: "M1020"
+  M1020:
+    name: SSL/TLS Inspection
+    mitre_id: M1020
     cost: 200
-    mitre_description: "Decrypts traffic to find hidden threats"
-    real_world_examples: "Fortinet Deep Packet Inspection or Palo Alto Networks SSL decryption."
-    story_name: "The Royal Inquisitor"
-    story_description: "Examines sealed deliveries for hidden dangers before allowing them into the keep."
+    d3fend:
+    - id: D3-MENCR
+      name: Message Encryption
+    visible_in_beginner: true
+    mitre_description: Decrypts traffic to find hidden threats
+    real_world_examples: Fortinet Deep Packet Inspection or Palo Alto Networks SSL decryption.
+    story_name: The Royal Inquisitor
+    story_description: Examines sealed deliveries for hidden dangers before allowing them into the keep.
+
+  M1015:
+    name: Active Directory Configuration
+    mitre_id: M1015
+    cost: 200
+    d3fend:
+    - id: D3-DTP
+      name: Domain Trust Policy
+    visible_in_beginner: false
+    mitre_description: Configures directory services securely to prevent privilege escalation and credential theft
+    real_world_examples: Disabling LLMNR/NBT-NS, restricting Domain Admin logins to Tier 0 systems, and enforcing SMB signing.
+    story_name: The Royal Lineage
+    story_description: A strict hierarchy of nobles and titles is enforced. A mere squire cannot simply declare themselves a Duke to command the castle guards or access the treasury.
+
+  M1018:
+    name: User Account Management
+    mitre_id: M1018
+    cost: 150
+    d3fend:
+    - id: D3-UAP
+      name: User Account Permissions
+    - id: D3-AL
+      name: Account Locking
+    visible_in_beginner: false
+    mitre_description: Manages the lifecycle of user accounts to limit unnecessary or stale privileges
+    real_world_examples: Disabling inactive accounts, performing quarterly access reviews, and enforcing strict offboarding processes.
+    story_name: The Steward's Roster
+    story_description: The Steward actively revokes castle access from mercenaries whose contracts have expired and banishes idle loiterers from the courtyard.
+
+  M1027:
+    name: Password Policies
+    mitre_id: M1027
+    cost: 100
+    d3fend:
+    - id: D3-CDP
+      name: Change Default Password
+    - id: D3-PR
+      name: Password Rotation
+    - id: D3-SPP
+      name: Strong Password Policy
+    visible_in_beginner: false
+    mitre_description: Enforces strong password complexity, length, and rotation requirements
+    real_world_examples: Enforcing a minimum 14-character length, blocking common phrases, and preventing password reuse.
+    story_name: The Riddler's Gate
+    story_description: Guards demand a complex, ever-changing passphrase from travelers—no more using "password" or the King's birthday to gain entry.
+
+  M1030:
+    name: Network Segmentation
+    mitre_id: M1030
+    cost: 250
+    d3fend:
+    - id: D3-BDI
+      name: Broadcast Domain Isolation
+    visible_in_beginner: false
+    mitre_description: Divides a network into smaller, isolated segments to contain lateral movement during a breach
+    real_world_examples: Isolating the guest Wi-Fi from corporate networks, using VLANs, and setting up internal firewalls.
+    story_name: The Walled Districts
+    story_description: The castle is divided into isolated rings. Even if the outer bailey falls to the Shadow Guild, the inner keep remains sealed behind raised drawbridges.
+
+  M1031:
+    name: Network Intrusion Prevention
+    mitre_id: M1031
+    cost: 300
+    d3fend:
+    - id: D3-CAA
+      name: Connection Attempt Analysis
+    visible_in_beginner: false
+    mitre_description: Monitors network traffic to actively detect and block malicious exploits
+    real_world_examples: Deploying Snort, Suricata, or Cisco Firepower IPS appliances to drop packets matching known exploit patterns.
+    story_name: The Tower Ballistas
+    story_description: Vigilant archers actively scan the horizon, immediately shooting down any incoming projectiles, siege weapons, or suspicious ravens before they land.
+
+  M1033:
+    name: Limit Software Installation
+    mitre_id: M1033
+    cost: 150
+    d3fend: []
+    d3fend_status: confirmed_no_equivalent
+    visible_in_beginner: false
+    mitre_description: Restricts users from installing unauthorized software applications
+    real_world_examples: Removing local administrator privileges from standard users and using AppLocker or GPOs to block unapproved installers.
+    story_name: The Blacksmith's Seal
+    story_description: Only tools and weapons forged by the official royal armory are allowed. Peasants are forbidden from bringing their own makeshift swords into the barracks.
+
+  M1035:
+    name: Limit Access to Resource Over Network
+    mitre_id: M1035
+    cost: 200
+    d3fend:
+    - id: D3-DNR
+      name: Decoy Network Resource
+    - id: D3-NRAM
+      name: Network Resource Access Mediation
+    visible_in_beginner: false
+    mitre_description: Restricts access to specific network resources based on logical business needs
+    real_world_examples: Restricting SSH or database management ports to only accept connections from a dedicated admin jump box.
+    story_name: The Privy Council
+    story_description: Only designated, high-ranking advisors are allowed into the map room; the doors are completely hidden and walled off from the rest of the kingdom.
+
+  M1037:
+    name: Filter Network Traffic
+    mitre_id: M1037
+    cost: 200
+    d3fend:
+    - id: D3-NTSA
+      name: Network Traffic Signature Analysis
+    - id: D3-ANAA
+      name: Administrative Network Activity Analysis
+    visible_in_beginner: false
+    mitre_description: Filters incoming and outgoing network traffic based on IP addresses, ports, or protocols
+    real_world_examples: Configuring stateless or stateful network firewalls (like AWS Security Groups) to drop unapproved inbound connections.
+    story_name: The Customs Officers
+    story_description: Guards rigorously inspect all incoming merchant carts and outgoing messengers, turning away anyone lacking the proper royal travel permits.
+
+  M1038:
+    name: Execution Prevention
+    mitre_id: M1038
+    cost: 250
+    d3fend:
+    - id: D3-EDL
+      name: Executable Denylisting
+    visible_in_beginner: false
+    mitre_description: Blocks unauthorized scripts, binaries, or untrusted code from executing on endpoints
+    real_world_examples: Using Microsoft AppLocker, WDAC, or application whitelisting tools to run only verified software.
+    story_name: The King's Decree
+    story_description: A magical ward that instantly paralyzes anyone attempting to cast unauthorized spells or read from forbidden tomes within the castle walls.
+
+  M1040:
+    name: Behavior Prevention on Endpoint
+    mitre_id: M1040
+    cost: 250
+    d3fend:
+    - id: D3-LAM
+      name: Local Account Monitoring
+    visible_in_beginner: false
+    mitre_description: Monitors and blocks active processes exhibiting suspicious or anomalous behavior patterns
+    real_world_examples: EDR tools like CrowdStrike or SentinelOne blocking a standard word processor from suddenly launching a command shell.
+    story_name: The Suspicion Ward
+    story_description: Guards closely monitor the behavior of the staff. If the court jester suddenly starts drawing a sword instead of juggling, he is tackled immediately.
+
+  M1041:
+    name: Encrypt Sensitive Information
+    mitre_id: M1041
+    cost: 200
+    d3fend:
+    - id: D3-DENCR
+      name: Disk Encryption
+    - id: D3-FE
+      name: File Encryption
+    - id: D3-MENCR
+      name: Message Encryption
+    visible_in_beginner: false
+    mitre_description: Encrypts sensitive data at rest or in transit to protect confidentiality from unauthorized eyes
+    real_world_examples: Using BitLocker for full disk encryption or enforcing TLS 1.3 for all web data transmissions.
+    story_name: The Ciphered Scrolls
+    story_description: Royal decrees are written in a dead, magical language. Even if a Shadow Guild spy steals the scroll, they cannot read a single word of it.
+
+  M1042:
+    name: Disable or Remove Feature or Program
+    mitre_id: M1042
+    cost: 150
+    d3fend: []
+    d3fend_status: confirmed_no_equivalent
+    visible_in_beginner: false
+    mitre_description: Disables or removes unnecessary software features or protocols to reduce the overall attack surface
+    real_world_examples: Disabling macros in Microsoft Office or completely turning off legacy protocols like TLS 1.0 and SMBv1.
+    story_name: The Sealed Catacombs
+    story_description: Laborers purposely collapse old, forgotten tunnels and board up abandoned secret passages so thieves cannot use them to bypass the gates.
+
+  M1045:
+    name: Code Signing
+    mitre_id: M1045
+    cost: 200
+    d3fend:
+    - id: D3-EAL
+      name: Executable Allowlisting
+    visible_in_beginner: false
+    mitre_description: Digitally signs software to verify the identity of the author and ensure it hasn't been altered
+    real_world_examples: Verifying valid Microsoft, Apple, or custom internal developer certificates before allowing software to run.
+    story_name: The Royal Wax Seal
+    story_description: Every official missive must bear the King's enchanted wax seal. Forgeries lacking the proper crest are immediately thrown into the hearth.
+
+  M1051:
+    name: Update Software
+    mitre_id: M1051
+    cost: 150
+    d3fend:
+    - id: D3-SWI
+      name: Software Inventory
+    - id: D3-SU
+      name: Software Update
+    - id: D3-RS
+      name: Restore Software
+    visible_in_beginner: false
+    mitre_description: Applies security patches to software and operating systems to remediate known vulnerabilities
+    real_world_examples: Running monthly Windows Update cycles or patching vulnerable open-source dependencies (like Log4j updates).
+    story_name: The Mason's Upkeep
+    story_description: Stonemasons constantly patch weathering walls, reinforce rusting iron gates, and upgrade the defenses against newly discovered Shadow Guild siege tactics.
+
+  M1054:
+    name: Software Configuration
+    mitre_id: M1054
+    cost: 150
+    d3fend:
+    - id: D3-ACH
+      name: Application Configuration Hardening
+    - id: D3-DRA
+      name: Disable Remote Access
+    visible_in_beginner: false
+    mitre_description: Configures software applications securely to minimize corporate risk and enforce safety baselines
+    real_world_examples: Configuring web browsers via GPO to block malicious extensions, disable pop-ups, and enforce strict privacy settings.
+    story_name: The Keep's Protocols
+    story_description: Strict rules govern the castle's daily operations. Fires must be extinguished at night, and weapons must be locked away, ensuring the castle operates safely.
 
 
-# --- ATTACKS DATA ---
+# --- ATTACKS DATA (10 total, 5 visible in Beginner mode) ---
 attacks:
+
   T1566:
-    name: "Phishing"
-    mitre_description: |
-      Adversaries may send phishing messages to gain access to victim systems. All forms of phishing are centered on tricking a user into performing a specific action, such as clicking a link or opening an attachment, often to execute malicious code or harvest credentials.
-    real_world_examples: "Emails, SMS, or chat messages that look legitimate but contain malicious payloads or links to fake login pages."
-    defenses: ["AV", "Audit", "WebRestrict", "Training"]
-    story_name: "Poisoned Messenger"
-    story_description: "A courier is delivering a letter, but the ink is infused with a toxin designed to incapacitate whoever handles the parchment."
+    name: Phishing
+    mitre_id: T1566
+    defenses:
+    - M1049
+    - M1047
+    - M1021
+    - M1017
+    - M1031
+    - M1054
+    visible_in_beginner: true
+    mitre_description: Adversaries may send phishing messages to gain access to victim systems. All forms of phishing are centered on tricking a user into performing a specific action, such as clicking a link or opening an attachment, often to execute malicious code or harvest credentials.
+    real_world_examples: Emails, SMS, or chat messages that look legitimate but contain malicious payloads or links to fake login pages.
+    story_name: Poisoned Messenger
+    story_description: A courier is delivering a letter, but the ink is infused with a toxin designed to incapacitate whoever handles the parchment.
 
   T1552:
-    name: "Unsecured Credentials"
-    mitre_description: |
-      Adversaries may search local system sources to find insecurely stored credentials. These can include passwords, certificates, or tokens stored in files (like .txt or .config), environment variables, or the system registry.
-    real_world_examples: 'A developer leaving a "passwords.txt" file on their desktop or hardcoding an API key into a script that everyone in the company can read.'
-    defenses: ["Audit", "OSConfig", "PAM", "RestrictPerms", "Training"]
-    story_name: "Undercover Spy"
-    story_description: "A member of the Shadow Guild is infiltrating the castle in the guise of a servant, searching for physical keys left on hooks or eavesdropping on whispered secrets in the corridors."
+    name: Unsecured Credentials
+    mitre_id: T1552
+    defenses:
+    - M1047
+    - M1028
+    - M1026
+    - M1022
+    - M1017
+    - M1015
+    - M1041
+    - M1037
+    - M1035
+    - M1027
+    - M1051
+    visible_in_beginner: true
+    mitre_description: Adversaries may search local system sources to find insecurely stored credentials. These can include passwords, certificates, or tokens stored in files (like .txt or .config), environment variables, or the system registry.
+    real_world_examples: A developer leaving a "passwords.txt" file on their desktop or hardcoding an API key into a script that everyone in the company can read.
+    story_name: Undercover Spy
+    story_description: A member of the Shadow Guild is infiltrating the castle in the guise of a servant, searching for physical keys left on hooks or eavesdropping on whispered secrets in the corridors.
 
   T1098:
-    name: "Account Manipulation"
-    mitre_description: |
-      Adversaries may manipulate accounts to maintain access to victim systems. This includes modifying account permissions, adding new accounts to privileged groups (like "Domain Admins"), or resetting passwords to take over existing legitimate accounts.
-    real_world_examples: 'After gaining initial access, an attacker adds their own "backdoor" account to the server's Administrators group so they can log in easily later.'
-    defenses: ["MFA", "OSConfig", "PAM", "RestrictPerms"]
-    story_name: "Corrupt Seneschal"
-    story_description: "An enemy agent is attempting to bribe the castle's record-keeper to alter the laws of the realm. They want to be declared a Duke, providing them with unrestricted access to the castle gates."
+    name: Account Manipulation
+    mitre_id: T1098
+    defenses:
+    - M1032
+    - M1028
+    - M1026
+    - M1022
+    - M1042
+    - M1030
+    - M1018
+    visible_in_beginner: true
+    mitre_description: Adversaries may manipulate accounts to maintain access to victim systems. This includes modifying account permissions, adding new accounts to privileged groups (like "Domain Admins"), or resetting passwords to take over existing legitimate accounts.
+    real_world_examples: After gaining initial access, an attacker adds their own "backdoor" account to the server's Administrators group so they can log in easily later.
+    story_name: Corrupt Seneschal
+    story_description: An enemy agent is attempting to bribe the castle's record-keeper to alter the laws of the realm. They want to be declared a Duke, providing them with unrestricted access to the castle gates.
 
   T1027:
-    name: "Obfuscated Files"
-    mitre_description: |
-      Adversaries may attempt to make an executable or file difficult to discover or analyze by encrypting, encoding, or otherwise concealing its contents. This is intended to bypass security tools (like Antivirus) that look for known malicious signatures.
-    real_world_examples: 'Using "packing software" or complex encoding (like Base64) to hide a virus\'s code so that it looks like random, harmless text to a scanner.'
-    defenses: ["AV", "Audit", "Training"]
-    story_name: "Trojan Crate"
-    story_description: "A merchant is trying to enter the castle with a crate of supposedly standard supplies. This crate may house a magical parasite made to spread through and weaken the castle's stone structure."
+    name: Obfuscated Files
+    mitre_id: T1027
+    defenses:
+    - M1049
+    - M1047
+    - M1017
+    - M1040
+    visible_in_beginner: true
+    mitre_description: Adversaries may attempt to make an executable or file difficult to discover or analyze by encrypting, encoding, or otherwise concealing its contents. This is intended to bypass security tools (like Antivirus) that look for known malicious signatures.
+    real_world_examples: Using "packing software" or complex encoding (like Base64) to hide a virus's code so that it looks like random, harmless text to a scanner.
+    story_name: Trojan Crate
+    story_description: A merchant is trying to enter the castle with a crate of supposedly standard supplies. This crate may house a magical parasite made to spread through and weaken the castle's stone structure.
 
   T1059:
-    name: "Command and Scripting Interpreter"
-    mitre_description: |
-      Adversaries may abuse command and script interpreters to execute commands, scripts, or binaries. These interfaces (like PowerShell, Python, or Windows Command Shell) are powerful tools that attackers use to interact with systems and automate their activities.
-    real_world_examples: "An attacker uses a PowerShell script to automatically download more malware or scan the internal network for other vulnerable computers."
-    defenses: ["AV", "Audit", "PAM", "WebRestrict"]
-    story_name: "Sorcerer’s Script"
-    story_description: "An enemy mage stands beyond the castle walls, chanting ancient, complex commands to his Shadow Guild. These incantations are designed to exploit the mechanical logic of the drawbridge, forcing it to lower against the will of the defenders."
+    name: Command and Scripting Interpreter
+    mitre_id: T1059
+    defenses:
+    - M1049
+    - M1047
+    - M1026
+    - M1021
+    - M1040
+    - M1045
+    - M1042
+    - M1038
+    - M1033
+    visible_in_beginner: true
+    mitre_description: Adversaries may abuse command and script interpreters to execute commands, scripts, or binaries. These interfaces (like PowerShell, Python, or Windows Command Shell) are powerful tools that attackers use to interact with systems and automate their activities.
+    real_world_examples: An attacker uses a PowerShell script to automatically download more malware or scan the internal network for other vulnerable computers.
+    story_name: Sorcerer’s Script
+    story_description: An enemy mage stands beyond the castle walls, chanting ancient, complex commands to his Shadow Guild. These incantations are designed to exploit the mechanical logic of the drawbridge, forcing it to lower against the will of the defenders.
+
+  T1204:
+    name: User Execution
+    mitre_id: T1204
+    defenses:
+    - M1040
+    - M1038
+    - M1033
+    - M1031
+    - M1021
+    - M1017
+    visible_in_beginner: false
+    mitre_description: Adversaries may rely on a user to execute a malicious file or run commands for initial access or lateral movement. This typically happens when a user opens an email attachment, runs a macro in a document, or double-clicks a disguised executable file.
+    real_world_examples: An employee opening a malicious email attachment named 'Q4_Bonus_Report.xlsm' and clicking 'Enable Macros', which triggers an invisible malware installation.
+    story_name: The Bewitched Relic
+    story_description: The Guild leaves a beautifully crafted, seemingly harmless music box in the bustling courtyard. Overcome by curiosity, a young stablehand turns the crank, unwittingly triggering a dormant spell that unbars the barracks doors.
+
+  T1557:
+    name: Adversary-in-the-Middle
+    mitre_id: T1557
+    defenses:
+    - M1017
+    - M1030
+    - M1031
+    - M1035
+    - M1037
+    - M1041
+    - M1042
+    visible_in_beginner: false
+    mitre_description: Adversaries may position themselves between two or more networked devices to intercept, monitor, alter, or redirect communications. This allows them to harvest sensitive credentials, session tokens, or manipulate payloads in transit.
+    real_world_examples: An attacker setting up a rogue Wi-Fi hotspot in a coffee shop to intercept unencrypted HTTP traffic or session cookies from unsuspecting victims.
+    story_name: The False Raven
+    story_description: Shadow Guild rogues quietly intercept messenger birds flying between the kingdom's watchtowers. They meticulously swap the real scrolls with forged orders and send the birds on their way, manipulating the guard patrol routes from the shadows.
+
+  T1071:
+    name: Application Layer Protocol
+    mitre_id: T1071
+    defenses:
+    - M1037
+    - M1031
+    visible_in_beginner: false
+    mitre_description: Adversaries may communicate using application layer protocols to blend their command and control (C2) traffic with normal, legitimate network activity. Common protocols abused include HTTP, HTTPS, DNS, and SMTP.
+    real_world_examples: Malware installed on an endpoint making regular HTTPS requests to an attacker's external web server, masking its malicious communication as basic web browsing traffic.
+    story_name: The Merchant's Disguise
+    story_description: Shadow Guild spies masquerade as regular apple merchants and bards, passing secret hand signals and hidden messages right under the noses of the guards in the bustling town square.
+
+  T1499:
+    name: Endpoint Denial of Service
+    mitre_id: T1499
+    defenses:
+    - M1037
+    visible_in_beginner: false
+    mitre_description: Adversaries may conduct Denial of Service (DoS) attacks targeted at endpoints to degrade, disrupt, or completely exhaust the availability of services, applications, or system resources, rendering them unavailable to legitimate users.
+    real_world_examples: Flooding a critical internal web server or authentication domain controller with thousands of bogus requests per second until it crashes or freezes.
+    story_name: The Peasant Stampede
+    story_description: The Guild pays a massive mob of fake peasants to crowd the drawbridge and riot at the gates, completely freezing castle operations and preventing legitimate royal messengers from entering or leaving.
+
+  T1048:
+    name: Exfiltration Over Alternative Protocol
+    mitre_id: T1048
+    defenses:
+    - M1018
+    - M1022
+    - M1030
+    - M1031
+    - M1037
+    visible_in_beginner: false
+    mitre_description: Adversaries may steal or exfiltrate data from a victim network using a different protocol than the one originally used to compromise or control the system. This helps them bypass standard data loss prevention (DLP) filters.
+    real_world_examples: An attacker copying sensitive corporate database files and exfiltrating them out of the corporate network using DNS queries or FTP transfers instead of standard web traffic.
+    story_name: The Smuggler's Tunnel
+    story_description: Instead of trying to carry stolen gold out through the heavily guarded main gate, thieves bypass the checkpoints by sneaking the kingdom's secrets out through sewer grates and underground rivers.

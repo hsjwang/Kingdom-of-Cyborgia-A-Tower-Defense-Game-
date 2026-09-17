@@ -205,19 +205,29 @@ def draw_guidebook(screen, ui_state, loader):
     if ui_state.guidebook_section == "defenses":
         title_rect = pygame.Rect(
             gs.GUIDEBOOK_RECT.left + 90,
-            gs.GUIDEBOOK_RECT.top + 295,
+            gs.GUIDEBOOK_RECT.top + 285,
             gs.GUIDEBOOK_RECT.width - 180,
-            45
+            34
+        )
+
+        # Band between the story name and the story text, holding the real
+        # control name and its ATT&CK / D3FEND identifiers.
+        mitre_rect = pygame.Rect(
+            gs.GUIDEBOOK_RECT.left + 70,
+            gs.GUIDEBOOK_RECT.top + 320,
+            gs.GUIDEBOOK_RECT.width - 140,
+            62
         )
 
         desc_rect = pygame.Rect(
             gs.GUIDEBOOK_RECT.left + 85,
-            gs.GUIDEBOOK_RECT.top + 340,
+            gs.GUIDEBOOK_RECT.top + 384,
             gs.GUIDEBOOK_RECT.width - 180,
-            155
+            180
         )
 
     else:
+        mitre_rect = None
         # Higher and wider text layout for How to Play
         title_rect = pygame.Rect(
             gs.GUIDEBOOK_RECT.left + 70,
@@ -242,6 +252,17 @@ def draw_guidebook(screen, ui_state, loader):
       line_spacing=2,
       align="center"
     )
+
+    if mitre_rect is not None and current_page.get("mitre"):
+        draw_wrapped_text(
+            screen,
+            current_page["mitre"],
+            (95, 60, 25),
+            mitre_rect,
+            FONTS["small"],
+            line_spacing=3,
+            align="center"
+        )
 
     draw_wrapped_text(
         screen,
